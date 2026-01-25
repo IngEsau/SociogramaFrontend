@@ -1,6 +1,5 @@
 /**
  * Configuración de Axios para peticiones HTTP
- * Backend: https://sociogramabackend-production.up.railway.app/api
  */
 
 import axios from 'axios';
