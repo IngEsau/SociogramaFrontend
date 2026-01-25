@@ -1,0 +1,58 @@
+/* Fuentes de Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  /* Colores UTP Sociograma */
+  --verde-utp: #0F7E3C;
+  --verde-oscuro: #245C52;
+  --verde-oscuro-2: #06322B;
+  --rojo-utp: #7A1501;
+  --blanco-humo: #FEFEFF;
+  --gris: #313131;
+  
+  /* Gradiente UTP */
+  --gradiente-verde: radial-gradient(ellipse 65.28% 62.45% at 31.07% 31.98%, #245C52 0%, #06322B 100%);
+  
+  /* Fuentes */
+  font-family: 'Roboto', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light;
+  color: var(--gris);
+  background-color: var(--blanco-humo);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utilidades personalizadas */
+.font-lato {
+  font-family: 'Lato', sans-serif;
+}
+
+.font-roboto {
+  font-family: 'Roboto', sans-serif;
+}
+
+.bg-gradient-utp {
+  background: var(--gradiente-verde), #D9D9D9;
+}
+
+/* Inputs estilizados */
+.input-utp {
+  @apply w-full h-11 px-4 bg-[#245C52] rounded-full text-white placeholder:text-white/50 outline-none;
+}
+
+.input-utp:focus {
+  @apply ring-2 ring-white/30;
+}
+
+/* Botón principal */
+.btn-utp {
+  @apply px-4 py-2 bg-[#0F7E3C] text-white rounded-lg font-medium hover:bg-[#0a6630] transition-colors;
+}
