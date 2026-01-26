@@ -33,6 +33,10 @@ export const authService = {
     if (data.refresh) {
       localStorage.setItem('refresh_token', data.refresh);
     }
+    // Guardar usuario si viene en la respuesta
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
 
     return data;
   },

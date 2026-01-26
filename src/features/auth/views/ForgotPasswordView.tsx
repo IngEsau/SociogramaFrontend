@@ -1,38 +1,26 @@
 /**
- * Vista de Login - Sociograma UTP
+ * Vista de Recuperación de Contraseña - Sociograma UTP
  * Diseño responsivo (PC, Tablet, Mobile)
  */
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../../store';
+import { useState } from 'react';
 import { useRecaptcha } from '../../../core/hooks';
-import { LoginFormContent } from '../components';
+import { ForgotPasswordFormContent } from '../components/ForgotPasswordFormContent';
 
-export const LoginView = () => {
-  const navigate = useNavigate();
-  
-  // Estado local para los inputs
-  const [matricula, setMatricula] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-
-  // Estado global de autenticación (Zustand)
-  const { login, isLoading, error, clearError, user, isAuthenticated } = useAuthStore();
+export const ForgotPasswordView = () => {
+  // Estado local para el input
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Hook personalizado para reCAPTCHA con fallback
   const { recaptchaLoaded, recaptchaFailed, recaptchaError, allowSkip, getRecaptchaResponse, canProceedWithoutRecaptcha, skipRecaptcha, resetRecaptcha } = useRecaptcha();
 
-  // Redirigir al dashboard si ya está autenticado
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      navigate('/dashboard');
-    }
-  }, [isAuthenticated, user, navigate]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
+    setError(null);
+    setSuccess(null);
 
     // Obtiene la respuesta de reCAPTCHA
     const recaptchaResponse = getRecaptchaResponse();
@@ -41,31 +29,38 @@ export const LoginView = () => {
     if (!recaptchaResponse) {
       // Si reCAPTCHA se cargó correctamente, es requerido
       if (recaptchaLoaded) {
-        console.error('Por favor completa el reCAPTCHA');
-        alert('Por favor completa el reCAPTCHA');
+        setError('Por favor completa el reCAPTCHA');
         return;
       }
 
       // Si reCAPTCHA falló, permitir continuar solo si se ha omitido explícitamente
       if (!canProceedWithoutRecaptcha()) {
-        console.error('reCAPTCHA no se ha completado');
-        alert('Por favor completa el reCAPTCHA o espera a que se cargue');
+        setError('Por favor completa el reCAPTCHA o espera a que se cargue');
         return;
       }
     }
 
     try {
-      console.log('✓ Intentando login...');
-      await login({
-        username: matricula,
-        password: password,
-        recaptcha_token: recaptchaResponse,
-      });
-      console.log('✓ Login exitoso!');
-      // La navegación se hace en el useEffect cuando cambie isAuthenticated
-    } catch (err) {
-      console.error('✗ Error de login:', err);
+      setIsLoading(true);
+      console.log('✓ Intentando solicitud de recuperación...');
+
+      // TODO: Aquí iría la llamada al servicio de recuperación de contraseña
+      // await forgotPasswordService({ email, recaptcha_token: recaptchaResponse });
+
+      // Simulación de envío (temporal)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      console.log('✓ Solicitud de recuperación enviada para:', email);
+      setSuccess('Si existe una cuenta con el correo proporcionado, recibirás un enlace de recuperación.');
+      setEmail('');
       resetRecaptcha();
+
+    } catch (err) {
+      console.error('✗ Error al solicitar recuperación:', err);
+      setError('Ocurrió un error al procesar tu solicitud. Por favor, intenta nuevamente.');
+      resetRecaptcha();
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -162,16 +157,13 @@ export const LoginView = () => {
       <div className="flex-1 flex items-center justify-center xl-custom:justify-end pr-0 xl-custom:pr-[400px] relative z-20">
         {/* PC: Contenedor sin tarjeta */}
         <div className="hidden xl-custom:flex xl-custom:w-[480px] flex-col justify-center items-center gap-6">
-          <LoginFormContent
-            matricula={matricula}
-            setMatricula={setMatricula}
-            password={password}
-            setPassword={setPassword}
-            showPassword={showPassword}
-            setShowPassword={setShowPassword}
+          <ForgotPasswordFormContent
+            email={email}
+            setEmail={setEmail}
             handleSubmit={handleSubmit}
             isLoading={isLoading}
             error={error}
+            success={success}
             variant="desktop"
             recaptchaFailed={recaptchaFailed}
             recaptchaError={recaptchaError}
@@ -190,16 +182,13 @@ export const LoginView = () => {
           }}
         >
           <div className="flex-1 flex flex-col justify-center items-center gap-6">
-            <LoginFormContent
-              matricula={matricula}
-              setMatricula={setMatricula}
-              password={password}
-              setPassword={setPassword}
-              showPassword={showPassword}
-              setShowPassword={setShowPassword}
+            <ForgotPasswordFormContent
+              email={email}
+              setEmail={setEmail}
               handleSubmit={handleSubmit}
               isLoading={isLoading}
               error={error}
+              success={success}
               variant="tablet"
               recaptchaFailed={recaptchaFailed}
               recaptchaError={recaptchaError}
@@ -219,16 +208,13 @@ export const LoginView = () => {
           }}
         >
           <div className="w-full flex flex-col justify-start items-center gap-5">
-            <LoginFormContent
-              matricula={matricula}
-              setMatricula={setMatricula}
-              password={password}
-              setPassword={setPassword}
-              showPassword={showPassword}
-              setShowPassword={setShowPassword}
+            <ForgotPasswordFormContent
+              email={email}
+              setEmail={setEmail}
               handleSubmit={handleSubmit}
               isLoading={isLoading}
               error={error}
+              success={success}
               variant="mobile"
               recaptchaFailed={recaptchaFailed}
               recaptchaError={recaptchaError}
@@ -247,4 +233,4 @@ export const LoginView = () => {
   );
 };
 
-export default LoginView;
+export default ForgotPasswordView;

@@ -9,15 +9,37 @@ export interface LoginResponse {
   user?: UserResponse;
 }
 
-// Respuesta de usuario (GET /auth/me/)
+// Información del alumno (si el usuario es alumno)
+export interface AlumnoInfo {
+  id: number;
+  matricula: string;
+  semestre_actual: number;
+  promedio: number | null;
+  estatus: string;
+  programa: string;
+}
+
+// Información del docente (si el usuario es docente/tutor)
+export interface DocenteInfo {
+  id: number;
+  profesor_id: string;
+  es_tutor: boolean;
+  division: string;
+}
+
+// Respuesta de usuario (GET /auth/me/ o login)
 export interface UserResponse {
   id: number;
   username: string;
   email: string;
+  nombre_completo: string;
   first_name: string;
   last_name: string;
-  rol: 'ALUMNO' | 'ACADEMICO' | 'ADMIN';
+  rol: 'ALUMNO' | 'DOCENTE' | 'ACADEMICO' | 'ADMIN';
   genero: 'Masculino' | 'Femenino' | 'Otro';
+  is_staff: boolean;
+  alumno?: AlumnoInfo;
+  docente?: DocenteInfo;
 }
 
 // Credenciales de login
@@ -35,7 +57,7 @@ export interface RegisterData {
   password2: string;
   first_name: string;
   last_name: string;
-  rol: 'ALUMNO' | 'ACADEMICO' | 'ADMIN';
+  rol: 'ALUMNO' | 'DOCENTE' | 'ACADEMICO' | 'ADMIN';
   genero: 'Masculino' | 'Femenino' | 'Otro';
 }
 

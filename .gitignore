@@ -54,3 +54,7 @@ coverage
 
 # Documentation
 docs
+
+# Feature en desarrollo por otro programador
+# No subir cambios locales - el desarrollo oficial está en la rama feat/dashboard
+src/features/dashboard/

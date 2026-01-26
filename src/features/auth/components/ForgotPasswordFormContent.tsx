@@ -1,21 +1,18 @@
 /**
- * Contenido del formulario de Login
- * Componente específico para la autenticación
+ * Contenido del formulario de Recuperación de Contraseña
+ * Componente específico para solicitar recuperación de contraseña
  */
 
 import { Link } from 'react-router-dom';
-import { AccountIcon, LockIcon, EyeIcon, EyeOffIcon } from '../../../components/ui';
+import { AccountIcon } from '../../../components/ui';
 
-interface LoginFormContentProps {
-  matricula: string;
-  setMatricula: (value: string) => void;
-  password: string;
-  setPassword: (value: string) => void;
-  showPassword: boolean;
-  setShowPassword: (value: boolean) => void;
+interface ForgotPasswordFormContentProps {
+  email: string;
+  setEmail: (value: string) => void;
   handleSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
   error: string | null;
+  success: string | null;
   variant: 'desktop' | 'tablet' | 'mobile';
   recaptchaError?: string | null;
   recaptchaFailed?: boolean;
@@ -23,22 +20,19 @@ interface LoginFormContentProps {
   onSkipRecaptcha?: () => void;
 }
 
-export const LoginFormContent = ({
-  matricula,
-  setMatricula,
-  password,
-  setPassword,
-  showPassword,
-  setShowPassword,
+export const ForgotPasswordFormContent = ({
+  email,
+  setEmail,
   handleSubmit,
   isLoading,
   error,
+  success,
   variant,
   recaptchaError,
   recaptchaFailed,
   allowSkip,
   onSkipRecaptcha,
-}: LoginFormContentProps) => {
+}: ForgotPasswordFormContentProps) => {
   const isMobile = variant === 'mobile';
   const isDesktop = variant === 'desktop';
 
@@ -58,59 +52,39 @@ export const LoginFormContent = ({
       {/* Título */}
       <h1
         className={`text-center text-[#0F7E3C] font-['Lato'] font-bold leading-tight
-          ${isMobile ? 'text-3xl' : 'text-6xl'}`}
+          ${isMobile ? 'text-2xl' : 'text-5xl'}`}
       >
-        Sociograma UTP
+        Recuperar Contraseña
       </h1>
+
+      {/* Subtítulo */}
+      <p
+        className={`text-center text-[#313131] font-['Roboto'] leading-relaxed
+          ${isMobile ? 'text-sm' : 'text-lg'}`}
+      >
+        Ingresa tu correo académico y te enviaremos un enlace de recuperación si existe una cuenta asociada.
+      </p>
 
       {/* Formulario */}
       <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
-        {/* Campo Matrícula */}
+        {/* Campo Email */}
         <div className="flex flex-col gap-1">
           <label className={`text-[#0F7E3C] text-base font-['Roboto']
             ${isMobile ? 'text-3xl' : 'text-xl'}`}>
-            Matrícula
+            Correo Académico
           </label>
           <div className="w-full h-11 px-4 bg-[#245C52] rounded-full flex items-center gap-2">
             <AccountIcon />
             <input
-              type="text"
-              value={matricula}
-              onChange={(e) => setMatricula(e.target.value)}
-              placeholder="UTP0000000"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="utpxxxxxxx@utpuebla.edu.mx"
               className={`flex-1 bg-transparent text-white placeholder:text-white/50 outline-none font-['Roboto']
                 ${isMobile ? 'text-xs' : 'text-base'}`}
               required
               disabled={isLoading}
             />
-          </div>
-        </div>
-
-        {/* Campo Contraseña */}
-        <div className="flex flex-col gap-1">
-          <label className={`text-[#0F7E3C] text-base font-['Roboto']
-            ${isMobile ? 'text-3xl' : 'text-xl'}`}>
-            Contraseña
-          </label>
-          <div className="w-full h-11 px-4 bg-[#245C52] rounded-full flex items-center gap-2 relative">
-            <LockIcon />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="*************"
-              className={`flex-1 bg-transparent text-white placeholder:text-white/50 outline-none font-['Roboto'] pr-8
-                ${isMobile ? 'text-xs' : 'text-base'}`}
-              required
-              disabled={isLoading}
-            />
-            <div className="absolute right-4">
-              {showPassword ? (
-                <EyeIcon onClick={() => setShowPassword(false)} />
-              ) : (
-                <EyeOffIcon onClick={() => setShowPassword(true)} />
-              )}
-            </div>
           </div>
         </div>
 
@@ -121,12 +95,19 @@ export const LoginFormContent = ({
           </div>
         )}
 
-        {/* Link olvidaste contraseña */}
+        {/* Success */}
+        {success && (
+          <div className="text-[#0F7E3C] text-sm font-['Roboto'] text-center bg-green-50 p-2 rounded-lg">
+            {success}
+          </div>
+        )}
+
+        {/* Link volver a login */}
         <Link
-          to="/forgot-password"
+          to="/login"
           className="text-center text-[#7A1501] text-sm md:text-lg font-['Roboto'] font-bold underline hover:text-[#5a1001] transition-colors"
         >
-          ¿Olvidaste tu contraseña?
+          Volver al inicio de sesión
         </Link>
 
         {/* reCAPTCHA */}
@@ -159,14 +140,14 @@ export const LoginFormContent = ({
           )}
         </div>
 
-        {/* Botón Acceder */}
+        {/* Botón Enviar */}
         <button
           type="submit"
           disabled={isLoading}
-          className="mx-auto w-36 max-w-[216px] min-h-[44px] px-4 py-2 bg-[#0F7E3C] rounded-lg flex justify-center items-center hover:bg-[#0a6630] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mx-auto w-auto max-w-[280px] min-h-[44px] px-6 py-2 bg-[#0F7E3C] rounded-lg flex justify-center items-center hover:bg-[#0a6630] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className="text-center text-[#FEFEFF] text-base font-['Roboto'] font-medium">
-            {isLoading ? 'Cargando...' : 'Acceder'}
+            {isLoading ? 'Enviando...' : 'Enviar enlace de recuperación'}
           </span>
         </button>
       </form>

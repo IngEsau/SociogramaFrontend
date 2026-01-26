@@ -39,10 +39,13 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           // Llamar al servicio de login
-          await authService.login(credentials);
+          const loginResponse = await authService.login(credentials);
 
-          // Obtener perfil del usuario
-          const user = await authService.getProfile();
+          // Usar el usuario de la respuesta si viene, si no obtener perfil
+          let user = loginResponse.user;
+          if (!user) {
+            user = await authService.getProfile();
+          }
 
           set({
             user,

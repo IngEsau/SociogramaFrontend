@@ -1,71 +1,89 @@
 /**
- * Vista de Login - Sociograma UTP
+ * Vista de Restablecimiento de Contraseña - Sociograma UTP
  * Diseño responsivo (PC, Tablet, Mobile)
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../../store';
-import { useRecaptcha } from '../../../core/hooks';
-import { LoginFormContent } from '../components';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ResetPasswordFormContent } from '../components/ResetPasswordFormContent';
+import { validatePasswordRequirements } from '../../../core/utils/passwordStrength';
 
-export const LoginView = () => {
-  const navigate = useNavigate();
-  
+export const ResetPasswordView = () => {
   // Estado local para los inputs
-  const [matricula, setMatricula] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(4);
 
-  // Estado global de autenticación (Zustand)
-  const { login, isLoading, error, clearError, user, isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token'); // Token que vendrá en la URL
 
-  // Hook personalizado para reCAPTCHA con fallback
-  const { recaptchaLoaded, recaptchaFailed, recaptchaError, allowSkip, getRecaptchaResponse, canProceedWithoutRecaptcha, skipRecaptcha, resetRecaptcha } = useRecaptcha();
-
-  // Redirigir al dashboard si ya está autenticado
+  // Countdown cuando hay éxito
   useEffect(() => {
-    if (isAuthenticated && user) {
-      navigate('/dashboard');
+    if (success && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (success && countdown === 0) {
+      navigate('/login');
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [success, countdown, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
+    setError(null);
+    setSuccess(null);
 
-    // Obtiene la respuesta de reCAPTCHA
-    const recaptchaResponse = getRecaptchaResponse();
+    // Validar requisitos obligatorios
+    const requirements = validatePasswordRequirements(password);
+    if (!requirements.allMet) {
+      const missingRequirements = [];
+      if (!requirements.hasMinLength) missingRequirements.push('Mínimo 8 caracteres');
+      if (!requirements.hasUpperCase) missingRequirements.push('Agrega mayúsculas (A-Z)');
+      if (!requirements.hasNumber) missingRequirements.push('Agrega números (0-9)');
 
-    // Validar reCAPTCHA
-    if (!recaptchaResponse) {
-      // Si reCAPTCHA se cargó correctamente, es requerido
-      if (recaptchaLoaded) {
-        console.error('Por favor completa el reCAPTCHA');
-        alert('Por favor completa el reCAPTCHA');
-        return;
-      }
+      setError(`Falta completar los siguientes requisitos:\n• ${missingRequirements.join('\n• ')}`);
+      return;
+    }
 
-      // Si reCAPTCHA falló, permitir continuar solo si se ha omitido explícitamente
-      if (!canProceedWithoutRecaptcha()) {
-        console.error('reCAPTCHA no se ha completado');
-        alert('Por favor completa el reCAPTCHA o espera a que se cargue');
-        return;
-      }
+    // Validar que las contraseñas coincidan
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+
+    // Validar que exista el token
+    if (!token) {
+      setError('Token de recuperación no válido o expirado');
+      return;
     }
 
     try {
-      console.log('✓ Intentando login...');
-      await login({
-        username: matricula,
-        password: password,
-        recaptcha_token: recaptchaResponse,
-      });
-      console.log('✓ Login exitoso!');
-      // La navegación se hace en el useEffect cuando cambie isAuthenticated
+      setIsLoading(true);
+      console.log('✓ Intentando restablecer contraseña...');
+
+      // TODO: Aquí iría la llamada al servicio de restablecimiento de contraseña
+      // await resetPasswordService({ token, password });
+
+      // Simulación de envío (temporal)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      console.log('✓ Contraseña restablecida exitosamente');
+      setSuccess('Contraseña restablecida exitosamente.');
+
+      // Limpiar campos
+      setPassword('');
+      setConfirmPassword('');
+
     } catch (err) {
-      console.error('✗ Error de login:', err);
-      resetRecaptcha();
+      console.error('✗ Error al restablecer contraseña:', err);
+      setError('Ocurrió un error al restablecer tu contraseña. Por favor, intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -162,21 +180,17 @@ export const LoginView = () => {
       <div className="flex-1 flex items-center justify-center xl-custom:justify-end pr-0 xl-custom:pr-[400px] relative z-20">
         {/* PC: Contenedor sin tarjeta */}
         <div className="hidden xl-custom:flex xl-custom:w-[480px] flex-col justify-center items-center gap-6">
-          <LoginFormContent
-            matricula={matricula}
-            setMatricula={setMatricula}
+          <ResetPasswordFormContent
             password={password}
             setPassword={setPassword}
-            showPassword={showPassword}
-            setShowPassword={setShowPassword}
+            confirmPassword={confirmPassword}
+            setConfirmPassword={setConfirmPassword}
             handleSubmit={handleSubmit}
             isLoading={isLoading}
             error={error}
+            success={success}
             variant="desktop"
-            recaptchaFailed={recaptchaFailed}
-            recaptchaError={recaptchaError}
-            allowSkip={allowSkip}
-            onSkipRecaptcha={skipRecaptcha}
+            countdown={countdown}
           />
         </div>
 
@@ -190,21 +204,17 @@ export const LoginView = () => {
           }}
         >
           <div className="flex-1 flex flex-col justify-center items-center gap-6">
-            <LoginFormContent
-              matricula={matricula}
-              setMatricula={setMatricula}
+            <ResetPasswordFormContent
               password={password}
               setPassword={setPassword}
-              showPassword={showPassword}
-              setShowPassword={setShowPassword}
+              confirmPassword={confirmPassword}
+              setConfirmPassword={setConfirmPassword}
               handleSubmit={handleSubmit}
               isLoading={isLoading}
               error={error}
+              success={success}
               variant="tablet"
-              recaptchaFailed={recaptchaFailed}
-              recaptchaError={recaptchaError}
-              allowSkip={allowSkip}
-              onSkipRecaptcha={skipRecaptcha}
+              countdown={countdown}
             />
           </div>
         </div>
@@ -219,32 +229,25 @@ export const LoginView = () => {
           }}
         >
           <div className="w-full flex flex-col justify-start items-center gap-5">
-            <LoginFormContent
-              matricula={matricula}
-              setMatricula={setMatricula}
+            <ResetPasswordFormContent
               password={password}
               setPassword={setPassword}
-              showPassword={showPassword}
-              setShowPassword={setShowPassword}
+              confirmPassword={confirmPassword}
+              setConfirmPassword={setConfirmPassword}
               handleSubmit={handleSubmit}
               isLoading={isLoading}
               error={error}
+              success={success}
               variant="mobile"
-              recaptchaFailed={recaptchaFailed}
-              recaptchaError={recaptchaError}
-              allowSkip={allowSkip}
-              onSkipRecaptcha={skipRecaptcha}
+              countdown={countdown}
             />
           </div>
         </div>
       </div>
 
-      {/* ========== FOOTER ========== */}
       <div className="absolute bottom-0 left-0 right-0 text-center text-[#313131] font-['Roboto'] font-bold py-3 text-sm md:text-sm lg:text-base z-20 [text-stroke:2px_white] [-webkit-text-stroke:0.2px_white]">
         © 2017 - 2026, Universidad Tecnológica de Puebla
       </div>
     </div>
   );
 };
-
-export default LoginView;
