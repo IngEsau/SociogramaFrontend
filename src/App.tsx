@@ -1,14 +1,14 @@
 /**
  * Sociograma UTP - App Principal
  */
-
-import LoginView from './features/auth/views/LoginView';
-import { RecaptchaProvider } from './app/RecaptchaProvider';
+import { RouterProvider } from "react-router-dom";
+import { RecaptchaProvider } from "./app/RecaptchaProvider";
+import { router } from "./app/router";
 
 function App() {
   return (
     <RecaptchaProvider>
-      <LoginView />
+      <RouterProvider router={router} />
     </RecaptchaProvider>
   );
 }

@@ -63,13 +63,18 @@ api.interceptors.response.use(
           return Promise.reject(refreshError);
         }
       } else {
-        // No hay refresh token, redirigir a login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        const hasSession =
+          !!localStorage.getItem("access_token") ||
+          !!localStorage.getItem("refresh_token") ||
+          !!localStorage.getItem("user");
+        if (hasSession) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("user");
+          window.location.href = "/login";
+        }
+        return Promise.reject(error);
       }
     }
-
     return Promise.reject(error);
   }
 );

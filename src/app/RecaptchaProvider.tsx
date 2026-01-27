@@ -11,7 +11,10 @@ interface RecaptchaProviderProps {
 export const RecaptchaProvider = ({ children }: RecaptchaProviderProps) => {
   // reCAPTCHA v2 se integra directamente en los componentes usando el script de Google
   // y el renderizado manual con grecaptcha.render()
+  const bypass = import.meta.env.VITE_DEV_BYPASS_RECAPTCHA === "true";
+  if (bypass) return <>{children}</>;
   return <>{children}</>;
 };
 
 export default RecaptchaProvider;
+
