@@ -3,16 +3,30 @@
  * Endpoints: /api/academic/
  */
 
-import { api } from '../core/api/axios';
-import type { Group } from '../core/types/api.types';
+import {api} from "../core/api/axios";
+
+export type MyGroup = {
+  id: number | string;
+  nombre?: string;
+  clave?: string;
+  grado?: number | string;
+  grupo?: string;
+};
+
+function groupLabel(g: MyGroup) {
+  return (
+    g.nombre ||
+    g.clave ||
+    (g.grado && g.grupo ? `${g.grado}°${g.grupo}` : undefined) ||
+    `Grupo ${g.id}`
+  );
+}
 
 export const academicService = {
-  /**
-   * Obtener grupos del usuario actual
-   * GET /academic/my-groups/
-   */
-  async getMyGroups(): Promise<Group[]> {
-    const { data } = await api.get<Group[]>('/academic/my-groups/');
-    return data;
+  async myGroups(): Promise<Array<MyGroup & { label: string }>> {
+    const { data } = await api.get<MyGroup[]>("/academic/my-groups/");
+    const arr = Array.isArray(data) ? data : [];
+    console.log(data);
+    return arr.map((g) => ({ ...g, label: groupLabel(g) }));
   },
 };

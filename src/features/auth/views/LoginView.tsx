@@ -6,6 +6,9 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../../store';
 import { LoginFormContent } from '../components';
+import { useNavigate } from 'react-router-dom';
+import { getHomePath } from '../../../core/routing/roleRouting';
+
 
 // Declaración global para recaptcha
 declare global {
@@ -26,8 +29,15 @@ export const LoginView = () => {
   const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
 
   // Estado global de autenticación (Zustand)
-  const { login, isLoading, error, clearError, user } = useAuthStore();
+  const navigate = useNavigate();
+  const { login, isLoading, error, clearError, me, isAuthenticated } = useAuthStore();
 
+  useEffect(() => {
+    if (isAuthenticated && me) {
+      navigate(getHomePath(me), { replace: true });          
+    }
+  }, [isAuthenticated, me, navigate]);
+  
   // Renderizar reCAPTCHA cuando el script se cargue
   useEffect(() => {
     const renderRecaptcha = () => {
@@ -98,27 +108,6 @@ export const LoginView = () => {
       window.grecaptcha?.reset();
     }
   };
-
-  // Si ya está autenticado, mostrar mensaje temporal
-  if (user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FEFEFF]">
-        <div className="bg-white p-8 rounded-lg shadow-lg text-center border border-[#0F7E3C]/20">
-          <h2 className="text-2xl font-bold text-[#0F7E3C] mb-4 font-['Lato']">
-            ¡Bienvenido, {user.first_name}!
-          </h2>
-          <p className="text-[#313131] mb-2 font-['Roboto']">Rol: {user.rol}</p>
-          <p className="text-[#313131] mb-4 font-['Roboto']">Email: {user.email}</p>
-          <button
-            onClick={() => useAuthStore.getState().logout()}
-            className="bg-[#7A1501] text-white px-6 py-2 rounded-lg hover:bg-[#5a1001] transition-colors font-['Roboto'] font-medium"
-          >
-            Cerrar Sesión
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full h-screen flex flex-col relative bg-[#FEFEFF] overflow-hidden">
@@ -285,5 +274,6 @@ export const LoginView = () => {
     </div>
   );
 };
+
 
 export default LoginView;

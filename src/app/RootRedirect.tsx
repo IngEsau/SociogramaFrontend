@@ -1,11 +1,17 @@
-import { Navigate } from "react-router-dom";
-import { useAuthStore } from "../store";
+import { useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuthStore } from '../store';
+import { getHomePath } from '../core/routing/roleRouting';
 
-export const RootRedirect = () => {
-  const bypass = import.meta.env.VITE_DEV_BYPASS_AUTH === "true";
-  if (bypass) return <Navigate to="/dashboard" replace />;
+export default function RootRedirect() {
+  const { isAuthenticated, me, fetchMe } = useAuthStore();
 
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  useEffect(() => {    
+    if (isAuthenticated && !me) fetchMe();
+  }, [isAuthenticated, me, fetchMe]);
 
-  return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
-};
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!me) return null;
+
+  return <Navigate to={getHomePath(me)} replace />;
+}

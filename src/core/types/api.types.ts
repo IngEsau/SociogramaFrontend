@@ -2,6 +2,15 @@
  * Tipos relacionados con respuestas de la API
  */
 
+export type UserRole =
+  | 'ADMIN'
+  | 'DOCENTE'
+  | 'ALUMNO'
+  | 'ACADEMICO'
+  // future feate for rol
+  | 'COMITE';
+
+
 // Respuesta de Login
 export interface LoginResponse {
   access: string;
@@ -16,9 +25,30 @@ export interface UserResponse {
   email: string;
   first_name: string;
   last_name: string;
-  rol: 'ALUMNO' | 'ACADEMICO' | 'ADMIN';
+  rol: UserRole;
   genero: 'Masculino' | 'Femenino' | 'Otro';
 }
+
+export interface DocenteInfo {
+  id?: number;
+  es_tutor?: boolean;
+  is_tutor?: boolean;
+  tutor?: boolean;
+  [key: string]: unknown;
+}
+
+export interface AlumnoInfo {
+  id?: number;
+  matricula?: string;
+  [key: string]: unknown;
+}
+
+export interface MeResponse {
+  user: UserResponse;
+  alumno?: AlumnoInfo | null;
+  docente?: DocenteInfo | null;
+}
+
 
 // Credenciales de login
 export interface LoginCredentials {
@@ -76,8 +106,9 @@ export interface ApiError {
 // Grupo académico
 export interface Group {
   id: number;
-  nombre: string;
-  codigo: string;
-  periodo: string;
-  // Agregar más campos según respuesta real
+  nombre?: string;
+  codigo?: string;
+  periodo?: string;  
+  [key: string]: unknown;
+  
 }

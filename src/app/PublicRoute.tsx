@@ -1,18 +1,11 @@
-import type { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
-import { useAuthStore } from "../store";
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuthStore, selectIsAuthenticated } from '../store';
+import { getHomePath } from '../core/routing/roleRouting';
 
-interface PublicRouteProps {
-  children: ReactNode;
+export function PublicRoute() {
+  const isAuth = useAuthStore(selectIsAuthenticated);
+  const me = useAuthStore((s) => s.me);
+
+  if (isAuth && me) return <Navigate to={getHomePath(me)} replace />;
+  return <Outlet />;
 }
-
-export const PublicRoute = ({ children }: PublicRouteProps) => {
-  const bypass = import.meta.env.VITE_DEV_BYPASS_AUTH === "true";
-  if (bypass) return <>{children}</>;
-
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
-
-  return <>{children}</>;
-};
