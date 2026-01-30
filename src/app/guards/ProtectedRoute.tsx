@@ -4,11 +4,11 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../../store';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
@@ -52,6 +52,6 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Si está autenticado, mostrar el contenido
-  return <>{children}</>;
+  // Si tiene children, mostrarlos; sino usar Outlet para rutas anidadas
+  return children ? <>{children}</> : <Outlet />;
 };

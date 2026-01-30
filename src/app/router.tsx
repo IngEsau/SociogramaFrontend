@@ -1,14 +1,18 @@
-/**
- * Configuración de rutas de la aplicación
- */
-
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+
+// Auth views
 import { LoginView } from '../features/auth/views/LoginView';
 import { ForgotPasswordView } from '../features/auth/views/ForgotPasswordView';
 import { ResetPasswordView } from '../features/auth/views/ResetPasswordView';
-// TEMPORAL: El dashboard oficial está en feat/dashboard
-import { DashboardView } from '../features/dashboard/views/DashboardView';
+
+// Dashboard
+import DashboardLayout from '../layouts/DashboardLayout/DashboardLayout';
+import DashboardHome from '../features/dashboard/views/DashboardHome';
+
+// Student Form
 import { StudentFormView } from '../features/studentForm/views';
+
+// Guards
 import { ProtectedRoute, RoleProtectedRoute, ResetPasswordGuard, GuestGuard } from './guards';
 
 export const router = createBrowserRouter([
@@ -43,14 +47,16 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    // TEMPORAL: Ruta de prueba para verificar login
-    // El dashboard real se implementará en feat/dashboard
     path: '/dashboard',
-    element: (
-      <ProtectedRoute>
-        <DashboardView />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <DashboardLayout />,
+        children: [
+          { index: true, element: <DashboardHome /> },
+        ],
+      },
+    ],
   },
   {
     // Ruta del formulario del estudiante/sociograma
@@ -61,5 +67,9 @@ export const router = createBrowserRouter([
         <StudentFormView />
       </RoleProtectedRoute>
     ),
+  },
+  {
+    path: '*',
+    element: <Navigate to="/" replace />,
   },
 ]);
