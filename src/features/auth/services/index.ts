@@ -4,4 +4,4 @@
 
 export { authService } from './auth.service';
 export { forgotPasswordService } from './forgotPassword.service';
-export { resetPasswordService } from './resetPassword.service';
+export { resetPasswordService, validateResetTokenService } from './resetPassword.service';

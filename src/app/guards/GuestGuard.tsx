@@ -1,17 +1,18 @@
 /**
- * Guard para rutas protegidas
- * Verifica que el usuario esté autenticado antes de permitir el acceso
+ * Guard para rutas de invitados (login, forgot-password, reset-password)
+ * Bloquea el acceso a estas rutas si el usuario YA tiene sesión activa
+ * Redirige al dashboard si el usuario está autenticado
  */
 
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
 
-interface ProtectedRouteProps {
+interface GuestGuardProps {
   children: React.ReactNode;
 }
 
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+export const GuestGuard = ({ children }: GuestGuardProps) => {
   const { isAuthenticated, user, fetchProfile } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
 
@@ -29,16 +30,17 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         try {
           await fetchProfile();
         } catch (error) {
-          console.error('Error al verificar autenticación:', error);
+          // Token inválido, el usuario puede acceder a las rutas de auth
+          console.error('Token inválido:', error);
         }
       }
       setIsChecking(false);
     };
 
     checkAuth();
-  }, [user, fetchProfile, isAuthenticated]);
+  }, [fetchProfile, isAuthenticated, user]);
 
-  // Mientras verifica, mostrar pantalla de carga minimalista (sin texto)
+  // Mientras verifica, mostrar pantalla de carga minimalista
   if (isChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FEFEFF]">
@@ -47,11 +49,11 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  // Si no está autenticado, redirigir al login
-  if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
+  // Si está autenticado, redirigir al dashboard (no puede acceder a rutas de auth)
+  if (isAuthenticated && user) {
+    return <Navigate to="/dashboard" replace />;
   }
 
-  // Si está autenticado, mostrar el contenido
+  // Si NO está autenticado, mostrar el contenido (login, forgot-password, etc.)
   return <>{children}</>;
 };

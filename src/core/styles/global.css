@@ -11,10 +11,10 @@
   --rojo-utp: #7A1501;
   --blanco-humo: #FEFEFF;
   --gris: #313131;
-  
+
   /* Gradiente UTP */
   --gradiente-verde: radial-gradient(ellipse 65.28% 62.45% at 31.07% 31.98%, #245C52 0%, #06322B 100%);
-  
+
   /* Fuentes */
   font-family: 'Roboto', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

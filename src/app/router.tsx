@@ -6,9 +6,10 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LoginView } from '../features/auth/views/LoginView';
 import { ForgotPasswordView } from '../features/auth/views/ForgotPasswordView';
 import { ResetPasswordView } from '../features/auth/views/ResetPasswordView';
-// ⚠️ TEMPORAL: El dashboard oficial está en feat/dashboard
+// TEMPORAL: El dashboard oficial está en feat/dashboard
 import { DashboardView } from '../features/dashboard/views/DashboardView';
-import { ProtectedRoute } from './guards';
+import { StudentFormView } from '../features/studentForm/views';
+import { ProtectedRoute, RoleProtectedRoute, ResetPasswordGuard, GuestGuard } from './guards';
 
 export const router = createBrowserRouter([
   {
@@ -17,15 +18,29 @@ export const router = createBrowserRouter([
   },
   {
     path: '/login',
-    element: <LoginView />,
+    element: (
+      <GuestGuard>
+        <LoginView />
+      </GuestGuard>
+    ),
   },
   {
     path: '/forgot-password',
-    element: <ForgotPasswordView />,
+    element: (
+      <GuestGuard>
+        <ForgotPasswordView />
+      </GuestGuard>
+    ),
   },
   {
     path: '/reset-password',
-    element: <ResetPasswordView />,
+    element: (
+      <GuestGuard>
+        <ResetPasswordGuard>
+          <ResetPasswordView />
+        </ResetPasswordGuard>
+      </GuestGuard>
+    ),
   },
   {
     // TEMPORAL: Ruta de prueba para verificar login
@@ -35,6 +50,16 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardView />
       </ProtectedRoute>
+    ),
+  },
+  {
+    // Ruta del formulario del estudiante/sociograma
+    // Solo accesible por ALUMNO, DOCENTE, ACADEMICO o ADMIN
+    path: '/student-form',
+    element: (
+      <RoleProtectedRoute allowedRoles={['ALUMNO', 'DOCENTE', 'ACADEMICO', 'ADMIN']}>
+        <StudentFormView />
+      </RoleProtectedRoute>
     ),
   },
 ]);

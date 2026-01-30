@@ -40,7 +40,7 @@ export const ForgotPasswordFormContent = ({
     <>
       {/* Logo - Tablet y Mobile */}
       {!isDesktop && (
-        <div className={`relative ${isMobile ? 'w-32 h-32' : 'w-40 h-40'}`}>
+        <div className={`relative ${isMobile ? 'w-20 h-20' : 'w-28 h-28'}`}>
           <img
             src="/Logo_UTP.png"
             alt="Universidad Tecnológica de Puebla"
@@ -59,8 +59,8 @@ export const ForgotPasswordFormContent = ({
 
       {/* Subtítulo */}
       <p
-        className={`text-center text-[#313131] font-['Roboto'] leading-relaxed
-          ${isMobile ? 'text-sm' : 'text-lg'}`}
+        className={`text-center text-[#313131] font-['Roboto'] leading-relaxed font-medium
+          ${isMobile ? 'text-xs' : 'text-base'}`}
       >
         Ingresa tu correo académico y te enviaremos un enlace de recuperación si existe una cuenta asociada.
       </p>
@@ -69,11 +69,11 @@ export const ForgotPasswordFormContent = ({
       <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
         {/* Campo Email */}
         <div className="flex flex-col gap-1">
-          <label className={`text-[#0F7E3C] text-base font-['Roboto']
-            ${isMobile ? 'text-3xl' : 'text-xl'}`}>
+          <label className={`text-[#0F7E3C] font-['Roboto'] font-medium
+            ${isMobile ? 'text-sm' : 'text-base'}`}>
             Correo Académico
           </label>
-          <div className="w-full h-11 px-4 bg-[#245C52] rounded-full flex items-center gap-2">
+          <div className="w-full h-10 px-3 bg-[#245C52] rounded-full flex items-center gap-2">
             <AccountIcon />
             <input
               type="email"
@@ -81,7 +81,7 @@ export const ForgotPasswordFormContent = ({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="utpxxxxxxx@utpuebla.edu.mx"
               className={`flex-1 bg-transparent text-white placeholder:text-white/50 outline-none font-['Roboto']
-                ${isMobile ? 'text-xs' : 'text-base'}`}
+                ${isMobile ? 'text-xs' : 'text-sm'}`}
               required
               disabled={isLoading}
             />
@@ -105,7 +105,7 @@ export const ForgotPasswordFormContent = ({
         {/* Link volver a login */}
         <Link
           to="/login"
-          className="text-center text-[#7A1501] text-sm md:text-lg font-['Roboto'] font-bold underline hover:text-[#5a1001] transition-colors"
+          className="text-center text-[#7A1501] text-xs md:text-base font-['Roboto'] font-bold underline hover:text-[#5a1001] transition-colors"
         >
           Volver al inicio de sesión
         </Link>
@@ -144,16 +144,16 @@ export const ForgotPasswordFormContent = ({
         <button
           type="submit"
           disabled={isLoading}
-          className="mx-auto w-auto max-w-[280px] min-h-[44px] px-6 py-2 bg-[#0F7E3C] rounded-lg flex justify-center items-center hover:bg-[#0a6630] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mx-auto w-auto max-w-[220px] min-h-[40px] px-4 py-2 bg-[#0F7E3C] rounded-lg flex justify-center items-center hover:bg-[#0a6630] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span className="text-center text-[#FEFEFF] text-base font-['Roboto'] font-medium">
+          <span className="text-center text-[#FEFEFF] text-sm font-['Roboto'] font-medium">
             {isLoading ? 'Enviando...' : 'Enviar enlace de recuperación'}
           </span>
         </button>
       </form>
 
       {/* Logo Comité de Tutorías */}
-      <div className={`relative ${isMobile ? 'w-32 h-auto' : 'w-52 h-auto'}`}>
+      <div className={`relative ${isMobile ? 'w-24 h-auto' : 'w-36 h-auto'}`}>
         <img
           src="/Logo_Comite.png"
           alt="Comité de Tutorías UTP"

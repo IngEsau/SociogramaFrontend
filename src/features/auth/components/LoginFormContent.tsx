@@ -46,7 +46,7 @@ export const LoginFormContent = ({
     <>
       {/* Logo - Tablet y Mobile */}
       {!isDesktop && (
-        <div className={`relative ${isMobile ? 'w-32 h-32' : 'w-40 h-40'}`}>
+        <div className={`relative ${isMobile ? 'w-20 h-20' : 'w-28 h-28'}`}>
           <img
             src="/Logo_UTP.png"
             alt="Universidad Tecnológica de Puebla"
@@ -58,7 +58,7 @@ export const LoginFormContent = ({
       {/* Título */}
       <h1
         className={`text-center text-[#0F7E3C] font-['Lato'] font-bold leading-tight
-          ${isMobile ? 'text-3xl' : 'text-6xl'}`}
+          ${isMobile ? 'text-2xl' : 'text-5xl'}`}
       >
         Sociograma UTP
       </h1>
@@ -67,11 +67,11 @@ export const LoginFormContent = ({
       <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
         {/* Campo Matrícula */}
         <div className="flex flex-col gap-1">
-          <label className={`text-[#0F7E3C] text-base font-['Roboto']
-            ${isMobile ? 'text-3xl' : 'text-xl'}`}>
+          <label className={`text-[#0F7E3C] font-['Roboto']
+            ${isMobile ? 'text-sm' : 'text-base'}`}>
             Matrícula
           </label>
-          <div className="w-full h-11 px-4 bg-[#245C52] rounded-full flex items-center gap-2">
+          <div className="w-full h-10 px-3 bg-[#245C52] rounded-full flex items-center gap-2">
             <AccountIcon />
             <input
               type="text"
@@ -79,7 +79,7 @@ export const LoginFormContent = ({
               onChange={(e) => setMatricula(e.target.value)}
               placeholder="UTP0000000"
               className={`flex-1 bg-transparent text-white placeholder:text-white/50 outline-none font-['Roboto']
-                ${isMobile ? 'text-xs' : 'text-base'}`}
+                ${isMobile ? 'text-xs' : 'text-sm'}`}
               required
               disabled={isLoading}
             />
@@ -88,11 +88,11 @@ export const LoginFormContent = ({
 
         {/* Campo Contraseña */}
         <div className="flex flex-col gap-1">
-          <label className={`text-[#0F7E3C] text-base font-['Roboto']
-            ${isMobile ? 'text-3xl' : 'text-xl'}`}>
+          <label className={`text-[#0F7E3C] font-['Roboto']
+            ${isMobile ? 'text-sm' : 'text-base'}`}>
             Contraseña
           </label>
-          <div className="w-full h-11 px-4 bg-[#245C52] rounded-full flex items-center gap-2 relative">
+          <div className="w-full h-10 px-3 bg-[#245C52] rounded-full flex items-center gap-2 relative">
             <LockIcon />
             <input
               type={showPassword ? 'text' : 'password'}
@@ -100,7 +100,7 @@ export const LoginFormContent = ({
               onChange={(e) => setPassword(e.target.value)}
               placeholder="*************"
               className={`flex-1 bg-transparent text-white placeholder:text-white/50 outline-none font-['Roboto'] pr-8
-                ${isMobile ? 'text-xs' : 'text-base'}`}
+                ${isMobile ? 'text-xs' : 'text-sm'}`}
               required
               disabled={isLoading}
             />
@@ -124,7 +124,7 @@ export const LoginFormContent = ({
         {/* Link olvidaste contraseña */}
         <Link
           to="/forgot-password"
-          className="text-center text-[#7A1501] text-sm md:text-lg font-['Roboto'] font-bold underline hover:text-[#5a1001] transition-colors"
+          className="text-center text-[#7A1501] text-xs md:text-base font-['Roboto'] font-bold underline hover:text-[#5a1001] transition-colors"
         >
           ¿Olvidaste tu contraseña?
         </Link>
@@ -163,16 +163,16 @@ export const LoginFormContent = ({
         <button
           type="submit"
           disabled={isLoading}
-          className="mx-auto w-36 max-w-[216px] min-h-[44px] px-4 py-2 bg-[#0F7E3C] rounded-lg flex justify-center items-center hover:bg-[#0a6630] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mx-auto w-32 max-w-[180px] min-h-[40px] px-4 py-2 bg-[#0F7E3C] rounded-lg flex justify-center items-center hover:bg-[#0a6630] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span className="text-center text-[#FEFEFF] text-base font-['Roboto'] font-medium">
+          <span className="text-center text-[#FEFEFF] text-sm font-['Roboto'] font-medium">
             {isLoading ? 'Cargando...' : 'Acceder'}
           </span>
         </button>
       </form>
 
       {/* Logo Comité de Tutorías */}
-      <div className={`relative ${isMobile ? 'w-32 h-auto' : 'w-52 h-auto'}`}>
+      <div className={`relative ${isMobile ? 'w-24 h-auto' : 'w-36 h-auto'}`}>
         <img
           src="/Logo_Comite.png"
           alt="Comité de Tutorías UTP"
