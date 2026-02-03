@@ -9,6 +9,7 @@ import {
   LogOut,
   X,
 } from "lucide-react";
+import { useAuthStore } from "../../store";
 
 type SidebarProps = {
   isOpen: boolean;
@@ -16,6 +17,15 @@ type SidebarProps = {
 };
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { user, logout } = useAuthStore();
+  
+  // Obtener el rol para mostrarlo en el sidebar
+  const userRole = user?.rol || 'USUARIO';
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <>
       {/* Overlay */}
@@ -56,7 +66,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
 
           <div className="mt-4 text-xs font-semibold tracking-wide text-white/90">
-            ADMIN
+            {userRole}
           </div>
         </div>
 
@@ -75,7 +85,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         <div className="px-2 py-2 flex flex-col gap-1">
           <NavItem icon={<Settings size={20} />} label="Configuración" />
-          <NavItem icon={<LogOut size={20} />} label="Salir" />
+          <NavItem 
+            icon={<LogOut size={20} />} 
+            label="Salir" 
+            onClick={handleLogout}
+          />
         </div>
 
 
@@ -86,9 +100,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   );
 }
 
-function NavItem({ icon, label }: { icon: React.ReactNode; label: string }) {
+function NavItem({ 
+  icon, 
+  label, 
+  onClick 
+}: { 
+  icon: React.ReactNode; 
+  label: string;
+  onClick?: () => void;
+}) {
   return (
     <button
+      onClick={onClick}
       className="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/10 text-left"
       aria-label={label}
       title={label}

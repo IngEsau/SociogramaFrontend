@@ -6,12 +6,11 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
-
-type UserRole = 'ALUMNO' | 'DOCENTE' | 'ACADEMICO' | 'ADMIN';
+import { getHomePath, normalizeRole, type AppRole } from '../../core/routing';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles: UserRole[];
+  allowedRoles: AppRole[];
 }
 
 export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRouteProps) => {
@@ -51,20 +50,15 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
     return <Navigate to="/login" replace />;
   }
 
-  // Verificar si el usuario tiene uno de los roles permitidos
-  const hasPermission = allowedRoles.includes(user.rol);
+  // Normalizar el rol del usuario
+  const normalizedRole = normalizeRole(user.rol);
 
-  // Si no tiene el rol adecuado, redirigir al dashboard con mensaje
+  // Verificar si el usuario tiene uno de los roles permitidos
+  const hasPermission = normalizedRole && allowedRoles.includes(normalizedRole);
+
+  // Si no tiene el rol adecuado, redirigir a su home
   if (!hasPermission) {
-    return (
-      <Navigate
-        to="/dashboard"
-        replace
-        state={{
-          error: 'No tienes permisos para acceder a esta sección'
-        }}
-      />
-    );
+    return <Navigate to={getHomePath(user)} replace />;
   }
 
   // Si está autenticado y tiene el rol correcto, mostrar el contenido

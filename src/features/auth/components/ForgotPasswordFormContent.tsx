@@ -112,7 +112,7 @@ export const ForgotPasswordFormContent = ({
 
         {/* reCAPTCHA */}
         <div className="flex flex-col justify-center w-full gap-2">
-          <div className="g-recaptcha flex justify-center"></div>
+          <div className="recaptcha-container flex justify-center"></div>
 
           {/* Mensaje de reCAPTCHA fallido */}
           {(recaptchaFailed || recaptchaError) && !allowSkip && (
@@ -133,7 +133,7 @@ export const ForgotPasswordFormContent = ({
           )}
 
           {/* Mensaje de validación saltada */}
-          {allowSkip && (
+          {recaptchaFailed && allowSkip && (
             <div className="text-green-600 text-xs font-['Roboto'] text-center bg-green-50 p-2 rounded-lg border border-green-200">
               ✓ Validación de reCAPTCHA omitida
             </div>

@@ -12,6 +12,7 @@ import type {
   RegisterData,
   UserResponse,
   ChangePasswordData,
+  FirstLoginChangePasswordData,
   VerifyTokenData,
   RefreshTokenData,
   RefreshTokenResponse,
@@ -36,6 +37,10 @@ export const authService = {
     // Guardar usuario si viene en la respuesta
     if (data.user) {
       localStorage.setItem('user', JSON.stringify(data.user));
+    }
+    // Guardar flag de first_login si viene en la respuesta
+    if (data.first_login !== undefined) {
+      localStorage.setItem('first_login', JSON.stringify(data.first_login));
     }
 
     return data;
@@ -125,6 +130,24 @@ export const authService = {
   },
 
   /**
+   * Cambiar contraseña en primer inicio de sesión
+   * POST /auth/first-login-change-password/
+   * No requiere old_password
+   */
+  async firstLoginChangePassword(passwordData: FirstLoginChangePasswordData): Promise<void> {
+    await api.post('/auth/first-login-change-password/', passwordData);
+    // Después de cambiar la contraseña, actualizar el flag en localStorage
+    const user = localStorage.getItem('user');
+    if (user) {
+      const userData = JSON.parse(user);
+      // El flag first_login ya no aplica después de cambiar contraseña
+      localStorage.setItem('user', JSON.stringify(userData));
+    }
+    // Remover el flag de first_login del localStorage
+    localStorage.removeItem('first_login');
+  },
+
+  /**
    * Verificar si el usuario está autenticado
    */
   isAuthenticated(): boolean {
@@ -144,5 +167,13 @@ export const authService = {
   getStoredUser(): UserResponse | null {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
+  },
+
+  /**
+   * Verificar si es el primer inicio de sesión del usuario
+   */
+  isFirstLogin(): boolean {
+    const firstLogin = localStorage.getItem('first_login');
+    return firstLogin ? JSON.parse(firstLogin) : false;
   },
 };

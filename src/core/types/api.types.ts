@@ -7,6 +7,7 @@ export interface LoginResponse {
   access: string;
   refresh: string;
   user?: UserResponse;
+  first_login?: boolean;
 }
 
 // Información del alumno (si el usuario es alumno)
@@ -61,9 +62,15 @@ export interface RegisterData {
   genero: 'Masculino' | 'Femenino' | 'Otro';
 }
 
-// Cambio de contraseña
+// Cambio de contraseña (usuario autenticado normal)
 export interface ChangePasswordData {
   old_password: string;
+  new_password: string;
+  new_password2: string;
+}
+
+// Cambio de contraseña en primer login (sin old_password)
+export interface FirstLoginChangePasswordData {
   new_password: string;
   new_password2: string;
 }

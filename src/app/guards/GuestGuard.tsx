@@ -1,22 +1,28 @@
 /**
  * Guard para rutas de invitados (login, forgot-password, reset-password)
  * Bloquea el acceso a estas rutas si el usuario YA tiene sesión activa
- * Redirige al dashboard si el usuario está autenticado
+ * Redirige al dashboard según el rol si el usuario está autenticado
  */
 
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
+import { getHomePath } from '../../core/routing';
 
 interface GuestGuardProps {
   children: React.ReactNode;
 }
 
+// Bypass para desarrollo
+const bypass = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
+
 export const GuestGuard = ({ children }: GuestGuardProps) => {
   const { isAuthenticated, user, fetchProfile } = useAuthStore();
-  const [isChecking, setIsChecking] = useState(true);
+  const [isChecking, setIsChecking] = useState(!bypass);
 
   useEffect(() => {
+    if (bypass) return;
+
     const checkAuth = async () => {
       // Si ya tenemos usuario en el estado (persistido), no necesitamos verificar
       if (isAuthenticated && user) {
@@ -40,6 +46,11 @@ export const GuestGuard = ({ children }: GuestGuardProps) => {
     checkAuth();
   }, [fetchProfile, isAuthenticated, user]);
 
+  // Bypass para desarrollo - permitir acceso sin verificación
+  if (bypass) {
+    return <>{children}</>;
+  }
+
   // Mientras verifica, mostrar pantalla de carga minimalista
   if (isChecking) {
     return (
@@ -49,9 +60,9 @@ export const GuestGuard = ({ children }: GuestGuardProps) => {
     );
   }
 
-  // Si está autenticado, redirigir al dashboard (no puede acceder a rutas de auth)
+  // Si está autenticado, redirigir al dashboard según su rol
   if (isAuthenticated && user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={getHomePath(user)} replace />;
   }
 
   // Si NO está autenticado, mostrar el contenido (login, forgot-password, etc.)

@@ -56,5 +56,3 @@ coverage
 docs
 
 # Other features carpets
-src/features/dashboard/
-src/features/studentForm

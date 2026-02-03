@@ -2,10 +2,10 @@
  * Exportación de componentes UI
  */
 
-export { 
-  AccountIcon, 
-  LockIcon, 
-  EyeIcon, 
+export {
+  AccountIcon,
+  LockIcon,
+  EyeIcon,
   EyeOffIcon,
   CloseIcon,
   CheckCircleIcon,

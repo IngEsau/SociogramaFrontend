@@ -93,6 +93,7 @@ export const LoginView = () => {
             recaptchaError={recaptchaError}
             allowSkip={allowSkip}
             onSkipRecaptcha={skipRecaptcha}
+            showRecaptchaContainer={true}
           />
         </div>
 
@@ -121,6 +122,7 @@ export const LoginView = () => {
               recaptchaError={recaptchaError}
               allowSkip={allowSkip}
               onSkipRecaptcha={skipRecaptcha}
+              showRecaptchaContainer={true}
             />
           </div>
         </div>
@@ -150,6 +152,7 @@ export const LoginView = () => {
               recaptchaError={recaptchaError}
               allowSkip={allowSkip}
               onSkipRecaptcha={skipRecaptcha}
+              showRecaptchaContainer={true}
             />
           </div>
         </div>

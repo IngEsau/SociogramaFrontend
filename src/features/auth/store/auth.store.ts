@@ -15,6 +15,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  requiresPasswordChange: boolean; // Nuevo: indica si necesita cambiar contraseña
 
   // Acciones
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -22,6 +23,8 @@ interface AuthState {
   fetchProfile: () => Promise<void>;
   clearError: () => void;
   setUser: (user: UserResponse | null) => void;
+  setRequiresPasswordChange: (value: boolean) => void;
+  completeFirstLoginPasswordChange: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -32,6 +35,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      requiresPasswordChange: false,
 
       // Login
       login: async (credentials: LoginCredentials) => {
@@ -47,11 +51,15 @@ export const useAuthStore = create<AuthState>()(
             user = await authService.getProfile();
           }
 
+          // Verificar si es primer login (requiere cambio de contraseña)
+          const requiresPasswordChange = loginResponse.first_login === true;
+
           set({
             user,
             isAuthenticated: true,
             isLoading: false,
             error: null,
+            requiresPasswordChange,
           });
         } catch (err) {
           const error = err as { response?: { data?: { detail?: string; non_field_errors?: string[] } } };
@@ -128,6 +136,16 @@ export const useAuthStore = create<AuthState>()(
         user,
         isAuthenticated: !!user
       }),
+
+      // Establecer si requiere cambio de contraseña
+      setRequiresPasswordChange: (value: boolean) => set({ requiresPasswordChange: value }),
+
+      // Completar cambio de contraseña de primer login
+      completeFirstLoginPasswordChange: async () => {
+        // Limpiar el flag de primer login
+        localStorage.removeItem('first_login');
+        set({ requiresPasswordChange: false });
+      },
     }),
     {
       name: 'auth-storage', // Nombre en localStorage
@@ -135,6 +153,7 @@ export const useAuthStore = create<AuthState>()(
         // Solo persistir estos campos
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        requiresPasswordChange: state.requiresPasswordChange,
       }),
     }
   )
@@ -146,3 +165,4 @@ export const selectIsAuthenticated = (state: AuthState) => state.isAuthenticated
 export const selectIsLoading = (state: AuthState) => state.isLoading;
 export const selectError = (state: AuthState) => state.error;
 export const selectUserRole = (state: AuthState) => state.user?.rol;
+export const selectRequiresPasswordChange = (state: AuthState) => state.requiresPasswordChange;
