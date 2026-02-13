@@ -4,24 +4,51 @@
 @import "tailwindcss";
 
 :root {
-  /* Colores UTP Sociograma */
+  /* ========== PALETA DE COLORES UTP ========== */
   --verde-utp: #0F7E3C;
+  --verde-principal: #0B5A4A;
   --verde-oscuro: #245C52;
   --verde-oscuro-2: #06322B;
   --rojo-utp: #7A1501;
+  --rojo-eliminar: #DC2626;
   --blanco-humo: #FEFEFF;
-  --gris: #313131;
+  --gris-principal: #313131;
+  --gris-texto: #4B5563;
+  --gris-claro: #9CA3AF;
+  --gris-border: #E5E7EB;
+  --fondo-app: #F7F8FA;
 
   /* Gradiente UTP */
   --gradiente-verde: radial-gradient(ellipse 65.28% 62.45% at 31.07% 31.98%, #245C52 0%, #06322B 100%);
 
-  /* Fuentes */
+  /* ========== SISTEMA DE TIPOGRAFÍA ========== */
+  /* Tamaños de fuente definidos */
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+  
+  /* Pesos de fuente */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Line heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  /* ========== CONFIGURACIÓN BASE ========== */
   font-family: 'Roboto', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  line-height: var(--leading-normal);
+  font-weight: var(--font-normal);
 
   color-scheme: light;
-  color: var(--gris);
+  color: var(--gris-principal);
   background-color: var(--blanco-humo);
 
   font-synthesis: none;
@@ -30,7 +57,50 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Utilidades personalizadas */
+/* ========== UTILIDADES DE TIPOGRAFÍA ========== */
+.text-heading-1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
+  color: var(--gris-principal);
+}
+
+.text-heading-2 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+  color: var(--verde-principal);
+}
+
+.text-heading-3 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-normal);
+  color: var(--verde-oscuro);
+}
+
+.text-body {
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  line-height: var(--leading-normal);
+  color: var(--gris-texto);
+}
+
+.text-body-sm {
+  font-size: var(--text-sm);
+  font-weight: var(--font-normal);
+  line-height: var(--leading-normal);
+  color: var(--gris-texto);
+}
+
+.text-caption {
+  font-size: var(--text-xs);
+  font-weight: var(--font-normal);
+  line-height: var(--leading-normal);
+  color: var(--gris-claro);
+}
+
+/* ========== UTILIDADES PERSONALIZADAS ========== */
 .font-lato {
   font-family: 'Lato', sans-serif;
 }

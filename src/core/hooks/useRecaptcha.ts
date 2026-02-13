@@ -61,17 +61,19 @@ export const useRecaptcha = (options?: UseRecaptchaOptions) => {
           // Limpiar cualquier contenido previo del contenedor
           container.innerHTML = '';
           
+          const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4Kv0qAAAAABXjYcI59V4hgRCGeos-m9q-dwq1';
+          
           const widgetId = window.grecaptcha.render(container as HTMLElement, {
-            sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4Kv0qAAAAABXjYcI59V4hgRCGeos-m9q-dwq1',
+            sitekey: siteKey,
             theme: 'light',
           });
           widgetIdRef.current = widgetId;
           setRecaptchaLoaded(true);
-          console.log('✓ reCAPTCHA cargado exitosamente (widget ID:', widgetId, ')');
+          console.log('✓ reCAPTCHA cargado');
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-        console.error('Error renderizando reCAPTCHA:', errorMessage);
+        console.warn('⚠️ Error renderizando reCAPTCHA:', errorMessage);
         setRecaptchaFailed(true);
         setRecaptchaError('El reCAPTCHA no está disponible. Puedes continuar sin validación.');
         setAllowSkip(true);

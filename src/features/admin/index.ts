@@ -5,7 +5,15 @@
  */
 
 // Views
-export { AdminDashboardView } from './views';
+export {
+  AdminDashboardView,
+  AdminDatabaseImportView,
+  AdminImportHubView,
+  AdminExcelImportView,
+  AdminCsvImportView,
+  AdminLogsView,
+  AdminArchivosView,
+} from './views';
 
 // Services
 export { adminService } from './services';

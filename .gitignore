@@ -27,6 +27,7 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
+.vscode
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -54,5 +55,4 @@ coverage
 
 # Documentation
 docs
-
-# Other features carpets
+.github/instructions

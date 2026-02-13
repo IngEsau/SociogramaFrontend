@@ -50,8 +50,63 @@ export interface ImportResult {
 
 export interface Period {
   id: number;
+  codigo: string;
   nombre: string;
   fecha_inicio: string;
   fecha_fin: string;
   activo: boolean;
+  grupos_count?: number;
+  alumnos_count?: number;
 }
+
+// Tipos para importación Excel (flujo analizar + ejecutar)
+
+export interface ExcelAnalysisResponse {
+  archivo_id: string;
+  nombre_archivo: string;
+  resumen: {
+    total_alumnos: number;
+    total_grupos: number;
+    total_tutores: number;
+  };
+  warnings: string[];
+  periodos_disponibles: Period[];
+}
+
+export interface ExcelExecuteRequest {
+  archivo_id: string;
+  periodo_id?: number;
+  crear_periodo: boolean;
+  nuevo_periodo_anio?: number;
+  nuevo_periodo_numero?: number;
+  desactivar_anteriores: boolean;
+}
+
+export interface ExcelExecuteResponse {
+  success: boolean;
+  message: string;
+  detalle: {
+    tutores_nuevos: number;
+    grupos_creados: number;
+    alumnos_nuevos: number;
+    inscripciones_creadas: number;
+    bajas: number;
+  };
+  periodo_desactivado?: boolean;
+  periodo_usado: {
+    id: number;
+    codigo: string;
+    nombre: string;
+  };
+  log_completo?: string[];
+}
+
+export interface CsvImportResponse {
+  success: boolean;
+  message: string;
+  registros_procesados?: number;
+  errores?: string[];
+}
+
+// Tipo de importación disponible
+export type ImportType = 'excel' | 'csv' | 'docentes' | 'alumnos';

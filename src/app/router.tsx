@@ -10,7 +10,15 @@ import { ChangePasswordView } from '../features/auth/views/ChangePasswordView';
 import DashboardLayout from '../layouts/DashboardLayout/DashboardLayout';
 
 // Feature views por rol
-import { AdminDashboardView } from '../features/admin';
+import {
+  AdminDashboardView,
+  AdminDatabaseImportView,
+  AdminImportHubView,
+  AdminExcelImportView,
+  AdminCsvImportView,
+  AdminLogsView,
+  AdminArchivosView,
+} from '../features/admin';
 import { TutorDashboardView } from '../features/tutor';
 import { StudentDashboardView, StudentFormView } from '../features/student';
 
@@ -90,11 +98,15 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <AdminDashboardView /> },
+      { path: 'import', element: <AdminImportHubView /> },
+      { path: 'import/excel', element: <AdminExcelImportView /> },
+      { path: 'import/:type', element: <AdminCsvImportView /> },
+      { path: 'import/legacy', element: <AdminDatabaseImportView /> },
+      { path: 'logs', element: <AdminLogsView /> },
+      { path: 'archivos', element: <AdminArchivosView /> },
       // Aquí irán más rutas de admin:
       // { path: 'users', element: <UserManagement /> },
       // { path: 'groups', element: <Groups /> },
-      // { path: 'import', element: <DatabaseImport /> },
-      // { path: 'logs', element: <Logs /> },
     ],
   },
 

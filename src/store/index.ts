@@ -12,3 +12,6 @@ export {
 } from '../features/auth/store/auth.store';
 
 export { useToastStore } from './toast.store';
+
+export { useTopbarStore } from './topbar.store';
+export type { TopbarAction } from './topbar.store';
