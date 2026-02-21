@@ -17,7 +17,7 @@ if (import.meta.env.DEV) {
 
   if (missingVars.length > 0) {
     console.error(
-      '❌ Variables de entorno faltantes:\n' +
+      'Variables de entorno faltantes:\n' +
       missingVars.map(v => `   - ${v}`).join('\n') +
       '\n\n💡 Copia .env.example a .env y configura las variables.'
     );

@@ -1,6 +1,72 @@
 /**
  * Tipos del módulo Sociogram (Core)
+ *
+ * Fase 5: Polaridad de preguntas y nuevos campos de puntaje.
+ * - Nodos: puntos_positivos, puntos_negativos, impacto_total, tamano
+ * - Clasificacion: ACEPTADO (verde), RECHAZADO (rojo), INVISIBLE (gris)
+ * - Conexiones: porcentaje_mutuo, polaridad
  */
+
+// ==========================================
+// Tipos de respuesta del backend /estadisticas/
+// ==========================================
+
+/** Tipo de clasificacion segun polaridad (Fase 5) */
+export type ClasificacionTipo = 'ACEPTADO' | 'RECHAZADO' | 'INVISIBLE';
+
+/** Tipo de conexion segun peso */
+export type TipoConexion = 'fuerte' | 'media' | 'debil';
+
+/** Nodo del sociograma (alumno) - Respuesta del backend */
+export interface SociogramNodo {
+  alumno_id: number;
+  matricula: string;
+  nombre: string;
+  tipo: ClasificacionTipo;
+  puntos_positivos: number;
+  puntos_negativos: number;
+  impacto_total: number;
+  tamano: number;
+  puntos_recibidos: number;
+  elecciones_recibidas: number;
+  elecciones_realizadas: number;
+  completo: boolean;
+}
+
+/** Conexion del sociograma - Respuesta del backend */
+export interface SociogramConexion {
+  origen_id: number;
+  origen_nombre: string;
+  destino_id: number;
+  destino_nombre: string;
+  peso: number;
+  tipo_conexion: TipoConexion;
+  porcentaje_mutuo?: number;
+  polaridad?: 'POSITIVA' | 'NEGATIVA';
+  orden_eleccion: number;
+}
+
+/** Grupo con estadisticas sociometricas - Respuesta del backend */
+export interface SociogramGrupoEstadisticas {
+  grupo_id: number;
+  grupo_clave: string;
+  total_alumnos: number;
+  respuestas_completas: number;
+  nodos: SociogramNodo[];
+  conexiones: SociogramConexion[];
+}
+
+/** Respuesta completa de /estadisticas/ */
+export interface EstadisticasResponse {
+  cuestionario_id: number;
+  cuestionario_titulo: string;
+  total_grupos: number;
+  grupos: SociogramGrupoEstadisticas[];
+}
+
+// ==========================================
+// Tipos internos para renderizar el grafo
+// ==========================================
 
 export interface GraphNode {
   id: number;

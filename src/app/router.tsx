@@ -18,11 +18,13 @@ import {
   AdminCsvImportView,
   AdminLogsView,
   AdminArchivosView,
+  AdminCuestionariosView,
+  AdminBancoPreguntasView,
 } from '../features/admin';
 import { TutorDashboardView } from '../features/tutor';
 import { StudentDashboardView, StudentFormView } from '../features/student';
 
-// ⚠️ COMITÉ: Rol en revisión - puede fusionarse con ADMIN
+// COMITÉ: Rol en revisión - puede fusionarse con ADMIN
 // Importar solo si COMMITTEE_ROLE_ENABLED = true en roleRouting.ts
 import { CommitteeDashboardView } from '../features/committee';
 import { COMMITTEE_ROLE_ENABLED } from '../core/routing';
@@ -104,6 +106,8 @@ export const router = createBrowserRouter([
       { path: 'import/legacy', element: <AdminDatabaseImportView /> },
       { path: 'logs', element: <AdminLogsView /> },
       { path: 'archivos', element: <AdminArchivosView /> },
+      { path: 'cuestionarios', element: <AdminCuestionariosView /> },
+      { path: 'cuestionarios/banco', element: <AdminBancoPreguntasView /> },
       // Aquí irán más rutas de admin:
       // { path: 'users', element: <UserManagement /> },
       // { path: 'groups', element: <Groups /> },
@@ -147,7 +151,7 @@ export const router = createBrowserRouter([
 
   // ============================================
   // RUTAS PROTEGIDAS POR ROL: COMMITTEE (COMITE)
-  // ⚠️ Solo habilitado si COMMITTEE_ROLE_ENABLED = true
+  // Solo habilitado si COMMITTEE_ROLE_ENABLED = true
   // Si está deshabilitado, usuarios COMITE son tratados como ADMIN
   // ============================================
   ...(COMMITTEE_ROLE_ENABLED

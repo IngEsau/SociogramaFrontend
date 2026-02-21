@@ -9,6 +9,7 @@ import {
   Settings,
   LogOut,
   X,
+  Library,
 } from "lucide-react";
 import { useAuthStore } from "../../store";
 
@@ -20,10 +21,10 @@ type SidebarProps = {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuthStore();
   const location = useLocation();
-  
+
   // Obtener el rol para mostrarlo en el sidebar
   const userRole = user?.rol || 'USUARIO';
-  
+
   // Determinar la ruta base según el rol
   const getBasePath = () => {
     switch (userRole) {
@@ -37,7 +38,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         return '/';
     }
   };
-  
+
   const basePath = getBasePath();
 
   const handleLogout = async () => {
@@ -53,7 +54,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (userRole === 'ADMIN') {
       return [
         ...commonItems,
-        { icon: <PlusSquare size={20} />, label: 'Crear', to: `${basePath}/create` },
+        { icon: <PlusSquare size={20} />, label: 'Cuestionarios', to: `${basePath}/cuestionarios` },
+        { icon: <Library size={20} />, label: 'Banco de preguntas', to: `${basePath}/cuestionarios/banco` },
         { icon: <Folder size={20} />, label: 'Archivos', to: `${basePath}/archivos` },
         { icon: <Upload size={20} />, label: 'Importar datos', to: `${basePath}/import` },
         { icon: <ClipboardList size={20} />, label: 'Registro', to: `${basePath}/logs` },

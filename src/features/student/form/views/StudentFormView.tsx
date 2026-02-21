@@ -46,11 +46,21 @@ const EXAMPLE_STUDENTS: Student[] = [
   { id: '28', name: 'Paola Ruiz Montero' },
   { id: '29', name: 'Raúl Domínguez Paredes' },
   { id: '30', name: 'Lucía Herrera Espinoza' },
+  { id: '31', name: 'Omar Moreno Fuentes' },
+  { id: '32', name: 'Diana Soto Villanueva' },
+  { id: '33', name: 'Héctor Ríos Sandoval' },
+  { id: '34', name: 'Mónica Durán Cabrera' },
+  { id: '35', name: 'Eduardo Estrada Pineda' },
+  { id: '36', name: 'Rosa Juárez Contreras' },
+  { id: '37', name: 'Víctor Cervantes Ibarra' },
+  { id: '38', name: 'Mariana Lara Montes' },
+  { id: '39', name: 'Jorge Acosta Velázquez' },
+  { id: '40', name: 'Teresa Campos Delgado' },
 ];
 
 export const StudentFormView = () => {
   const { user } = useAuthStore();
-  
+
   const {
     answers,
     isSubmitting,
@@ -95,12 +105,12 @@ export const StudentFormView = () => {
     <div className="w-full min-h-screen relative bg-white overflow-hidden">
       {/* Círculos decorativos de fondo */}
       <DecorativeCircles />
-      
+    
       {/* Contenido principal */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 py-8 sm:py-12 md:py-16 lg:py-20 flex flex-col items-center gap-6 sm:gap-8">
         {/* Header con logos, título e instrucciones */}
         <SurveyHeader groupName="" />
-        
+
         {/* Formulario con preguntas */}
         <SurveyForm
           studentName={user?.nombre_completo || ''}

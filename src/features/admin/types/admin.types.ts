@@ -110,3 +110,180 @@ export interface CsvImportResponse {
 
 // Tipo de importación disponible
 export type ImportType = 'excel' | 'csv' | 'docentes' | 'alumnos';
+
+// ==========================================
+// Cuestionarios
+// ==========================================
+
+/** Polaridad de una pregunta sociometrica */
+export type PreguntaPolaridad = 'POSITIVA' | 'NEGATIVA';
+
+/** Pregunta sociometrica */
+export interface Pregunta {
+  id: number;
+  texto: string;
+  tipo: 'SELECCION_ALUMNO';
+  polaridad?: PreguntaPolaridad;
+  max_elecciones: number;
+  descripcion?: string;
+  es_sociometrica: boolean;
+}
+
+/** Pregunta dentro de un cuestionario con su orden */
+export interface CuestionarioPregunta {
+  id: number;
+  pregunta: Pregunta;
+  orden: number;
+}
+
+/** Cuestionario completo */
+export interface Cuestionario {
+  id: number;
+  titulo: string;
+  descripcion?: string;
+  periodo: number;
+  periodo_codigo: string;
+  periodo_nombre: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  activo: boolean;
+  esta_activo: boolean;
+  preguntas?: CuestionarioPregunta[];
+  total_preguntas: number;
+  total_respuestas: number;
+  total_grupos: number;
+  creado_en: string;
+}
+
+/** Datos para crear una pregunta */
+export interface PreguntaInput {
+  texto: string;
+  tipo: 'SELECCION_ALUMNO';
+  polaridad: PreguntaPolaridad;
+  max_elecciones: number;
+  descripcion?: string;
+}
+
+// ==========================================
+// Banco global de preguntas
+// ==========================================
+
+/** Pregunta del banco tal como la devuelve */
+export interface PreguntaBanco {
+  id: number;
+  texto: string;
+  tipo: 'SELECCION_ALUMNO';
+  polaridad: PreguntaPolaridad;
+  max_elecciones: number;
+  orden: number;
+  activa: boolean;
+  descripcion?: string;
+  es_sociometrica?: boolean;
+  opciones?: unknown[];
+  creado_en?: string;
+}
+
+/** Respuesta de GET /api/admin/preguntas/ */
+export interface ListarBancoResponse {
+  total: number;
+  preguntas: PreguntaBanco[];
+}
+
+/** Body para POST /api/admin/preguntas/crear/ (individual) */
+export interface CrearPreguntaBancoRequest {
+  texto: string;
+  tipo: 'SELECCION_ALUMNO';
+  polaridad: PreguntaPolaridad;
+  max_elecciones: number;
+  orden?: number;
+  descripcion?: string;
+}
+
+/** Respuesta de POST /api/admin/preguntas/crear/ (individual) */
+export interface CrearPreguntaBancoResponse {
+  success: boolean;
+  pregunta: PreguntaBanco;
+  message: string;
+}
+
+/** Respuesta de POST /api/admin/preguntas/crear/ (bulk — array) */
+export interface CrearPreguntasBulkResponse {
+  success: boolean;
+  total_creadas: number;
+  preguntas: PreguntaBanco[];
+  message: string;
+}
+
+/** PUT /api/admin/preguntas/<id>/actualizar/ */
+export type ActualizarPreguntaBancoRequest = Partial<CrearPreguntaBancoRequest>;
+
+/** Respuesta de PUT /api/admin/preguntas/<id>/actualizar/ y editar-copia */
+export interface ActualizarPreguntaBancoResponse {
+  success: boolean;
+  pregunta: PreguntaBanco;
+}
+
+/** PUT /api/admin/preguntas/<id>/editar-copia/ — editar una pregunta clonada en un cuestionario */
+export type EditarCopiaPreguntaRequest = Partial<Pick<CrearPreguntaBancoRequest, 'texto' | 'polaridad' | 'descripcion' | 'max_elecciones'>>;
+
+/** Respuesta generica de acciones sobre el banco (eliminar, etc.) */
+export interface BancoActionResponse {
+  success: boolean;
+  message: string;
+  respuestas_count?: number;
+  error?: string;
+}
+
+/** POST /api/admin/cuestionarios/<id>/asociar-pregunta/ */
+export interface AsociarPreguntaRequest {
+  pregunta_id: number;
+}
+
+/** Datos para crear un cuestionario (POST /admin/cuestionarios/crear/) */
+export interface CrearCuestionarioRequest {
+  titulo: string;
+  descripcion?: string;
+  periodo: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  activo: boolean;
+  /** IDs de preguntas existentes del banco global. Se clonan al cuestionario. */
+  preguntas_ids: number[];
+  /** Preguntas nuevas creadas inline al momento de crear el cuestionario. */
+  preguntas?: PreguntaInput[];
+}
+
+/** Respuesta al crear cuestionario */
+export interface CrearCuestionarioResponse {
+  success: boolean;
+  cuestionario: Cuestionario;
+  message?: string;
+}
+
+/** Respuesta al listar cuestionarios */
+export interface ListarCuestionariosResponse {
+  cuestionarios: Cuestionario[];
+}
+
+/** Respuesta al activar cuestionario */
+export interface ActivarCuestionarioResponse {
+  success: boolean;
+  cuestionario: Cuestionario;
+  estados_creados: number;
+  grupos_afectados: number;
+  cuestionarios_desactivados?: number;
+}
+
+/** Respuesta al agregar pregunta */
+export interface AgregarPreguntaResponse {
+  success: boolean;
+  cuestionario_pregunta: CuestionarioPregunta;
+  total_preguntas: number;
+}
+
+/** Respuesta genérica de operaciones */
+export interface CuestionarioActionResponse {
+  success: boolean;
+  message: string;
+  total_preguntas?: number;
+}

@@ -13,6 +13,8 @@ export {
   AdminCsvImportView,
   AdminLogsView,
   AdminArchivosView,
+  AdminCuestionariosView,
+  AdminBancoPreguntasView,
 } from './views';
 
 // Services
