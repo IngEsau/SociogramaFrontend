@@ -125,8 +125,8 @@ export function AdminCuestionariosView() {
   } | null>(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
-  // Agregar pregunta (en detalle)
-  const [isAddingPregunta, setIsAddingPregunta] = useState(false);
+  // Agregar pregunta (en detalle) — ahora las operaciones son locales, no hay loading
+  const isAddingPregunta = false; // Siempre false, las operaciones son instantaneas
   const [showAddForm, setShowAddForm] = useState(false);
   const [isEditingDetail, setIsEditingDetail] = useState(false);
   const [addMode, setAddMode] = useState<'select' | 'custom' | 'bank' | null>(null);
@@ -139,6 +139,12 @@ export function AdminCuestionariosView() {
   // Edicion inline de pregunta copia
   const [editingCopyId, setEditingCopyId] = useState<number | null>(null);
   const [editCopyText, setEditCopyText] = useState('');
+
+  // Copia local de preguntas durante el modo edicion.
+  // Todas las ediciones (borrar, texto, polaridad, reorden) se aplican aqui.
+  // Solo al "Confirmar cambios" se envian al backend.
+  const [editablePreguntas, setEditablePreguntas] = useState<CuestionarioPregunta[] | null>(null);
+  const [isConfirmingEdits, setIsConfirmingEdits] = useState(false);
 
   // Drag & Drop
   const dragItem = useRef<number | null>(null);
@@ -286,6 +292,9 @@ export function AdminCuestionariosView() {
           message: `Cuestionario activado. ${res.estados_creados ?? 0} estados creados.`,
           type: 'success',
         });
+        // Tras activar exitosamente, volver a la lista
+        setSelectedCuestionario(null);
+        setViewMode('list');
       } else if (type === 'desactivar') {
         await adminService.desactivarCuestionario(cuestionario.id);
         showToast({ message: 'Cuestionario desactivado.', type: 'info' });
@@ -298,12 +307,13 @@ export function AdminCuestionariosView() {
         }
       }
       await fetchCuestionarios(selectedPeriodoId ?? undefined);
-      // Refrescar detalle si seguimos en esa vista
-      if (selectedCuestionario && (type === 'activar' || type === 'desactivar')) {
+      // Refrescar detalle si seguimos en esa vista (desactivar)
+      if (selectedCuestionario && type === 'desactivar') {
         await refreshDetalle(selectedCuestionario.id);
       }
     } catch (error: unknown) {
       const msg = extractErrorMessage(error, 'Error al ejecutar la accion');
+      console.error(`[AdminCuestionarios] Error en accion "${type}":`, error);
       showToast({ message: msg, type: 'error' });
     } finally {
       setIsConfirmLoading(false);
@@ -467,19 +477,6 @@ export function AdminCuestionariosView() {
     }
   };
 
-  const handleRemoverPregunta = async (preguntaRelId: number) => {
-    if (!selectedCuestionario) return;
-    try {
-      await adminService.removerPregunta(selectedCuestionario.id, preguntaRelId);
-      showToast({ message: 'Pregunta eliminada', type: 'success' });
-      await refreshDetalle(selectedCuestionario.id);
-      await fetchCuestionarios(selectedPeriodoId ?? undefined);
-    } catch (error: unknown) {
-      const msg = extractErrorMessage(error, 'Error al eliminar pregunta');
-      showToast({ message: msg, type: 'error' });
-    }
-  };
-
   /** Carga preguntas del banco que NO estan en el cuestionario actual */
   const fetchMissingBankQuestions = useCallback(async () => {
     if (!selectedCuestionario) return;
@@ -487,9 +484,11 @@ export function AdminCuestionariosView() {
     try {
       const res = await adminService.getBancoPreguntas();
       const allBank = res.preguntas || [];
+      // Usar editablePreguntas si estamos en modo edicion, sino las del cuestionario
+      const currentPreguntas = editablePreguntas || selectedCuestionario.preguntas || [];
       // IDs de preguntas ya en el cuestionario (basado en texto para evitar fallos por clonacion)
       const existingTexts = new Set(
-        (selectedCuestionario.preguntas || []).map((cp) => cp.pregunta.texto.toLowerCase().trim())
+        currentPreguntas.map((cp) => cp.pregunta.texto.toLowerCase().trim())
       );
       const missing = allBank.filter((bp) => !existingTexts.has(bp.texto.toLowerCase().trim()));
       setBankForDetail(missing);
@@ -500,33 +499,45 @@ export function AdminCuestionariosView() {
     } finally {
       setIsBankDetailLoading(false);
     }
-  }, [selectedCuestionario, showToast]);
+  }, [selectedCuestionario, editablePreguntas, showToast]);
 
-  /** Agregar preguntas seleccionadas del banco al cuestionario (via asociar) */
-  const handleAddFromBank = async () => {
-    if (!selectedCuestionario || selectedBankIds.size === 0) return;
-    setIsAddingPregunta(true);
-    try {
-      for (const bankId of selectedBankIds) {
-        await adminService.asociarPregunta(selectedCuestionario.id, { pregunta_id: bankId });
-      }
-      showToast({ message: `${selectedBankIds.size} pregunta(s) agregada(s)`, type: 'success' });
-      setSelectedBankIds(new Set());
-      setAddMode(null);
-      setShowAddForm(false);
-      await refreshDetalle(selectedCuestionario.id);
-      await fetchCuestionarios(selectedPeriodoId ?? undefined);
-    } catch (error: unknown) {
-      const msg = extractErrorMessage(error, 'Error al agregar preguntas del banco');
-      showToast({ message: msg, type: 'error' });
-    } finally {
-      setIsAddingPregunta(false);
-    }
+  /** Agregar preguntas seleccionadas del banco al cuestionario — local durante edicion */
+  const handleAddFromBank = () => {
+    if (!selectedCuestionario || selectedBankIds.size === 0 || !editablePreguntas) return;
+    // Obtener preguntas del banco seleccionadas
+    const selectedBankQuestions = bankForDetail.filter((bp) => selectedBankIds.has(bp.id));
+    if (selectedBankQuestions.length === 0) return;
+
+    // Agregar a la copia local usando IDs negativos temporales para diferenciarlas
+    let nextOrden = editablePreguntas.length;
+    const newEntries: CuestionarioPregunta[] = selectedBankQuestions.map((bp) => {
+      nextOrden += 1;
+      return {
+        id: -bp.id, // ID negativo temporal (se resolverá al confirmar)
+        pregunta: {
+          id: -bp.id,
+          texto: bp.texto,
+          tipo: bp.tipo || 'SELECCION_ALUMNO',
+          polaridad: bp.polaridad as PreguntaPolaridad,
+          max_elecciones: bp.max_elecciones || 3,
+          descripcion: bp.descripcion,
+          es_sociometrica: bp.es_sociometrica ?? true,
+        },
+        orden: nextOrden,
+        _bankId: bp.id, // Guardar ID real del banco para asociar al confirmar
+      } as CuestionarioPregunta & { _bankId: number };
+    });
+
+    setEditablePreguntas([...editablePreguntas, ...newEntries]);
+    showToast({ message: `${selectedBankIds.size} pregunta(s) agregada(s) (sin guardar)`, type: 'info' });
+    setSelectedBankIds(new Set());
+    setAddMode(null);
+    setShowAddForm(false);
   };
 
-  /** Agregar par de preguntas personalizadas (positiva + negativa) */
-  const handleAddCustomPair = async () => {
-    if (!selectedCuestionario) return;
+  /** Agregar par de preguntas personalizadas (positiva + negativa) — local durante edicion */
+  const handleAddCustomPair = () => {
+    if (!selectedCuestionario || !editablePreguntas) return;
     if (customPairText.trim().length < 10) {
       showToast({ message: 'La pregunta positiva debe tener al menos 10 caracteres', type: 'error' });
       return;
@@ -535,99 +546,116 @@ export function AdminCuestionariosView() {
       showToast({ message: 'La pregunta negativa debe tener al menos 10 caracteres', type: 'error' });
       return;
     }
-    setIsAddingPregunta(true);
-    try {
-      await adminService.agregarPregunta(selectedCuestionario.id, {
+
+    const baseOrder = editablePreguntas.length;
+    // Usamos IDs negativos únicos para las preguntas temporales
+    const tempIdPos = -(Date.now());
+    const tempIdNeg = -(Date.now() + 1);
+
+    const newPosEntry: CuestionarioPregunta = {
+      id: tempIdPos,
+      pregunta: {
+        id: tempIdPos,
         texto: customPairText.trim(),
         tipo: 'SELECCION_ALUMNO',
         polaridad: 'POSITIVA',
         max_elecciones: 3,
-      });
-      await adminService.agregarPregunta(selectedCuestionario.id, {
+        es_sociometrica: true,
+      },
+      orden: baseOrder + 1,
+    };
+    const newNegEntry: CuestionarioPregunta = {
+      id: tempIdNeg,
+      pregunta: {
+        id: tempIdNeg,
         texto: customPairTextNeg.trim(),
         tipo: 'SELECCION_ALUMNO',
         polaridad: 'NEGATIVA',
         max_elecciones: 3,
-      });
-      showToast({ message: 'Par de preguntas agregadas', type: 'success' });
-      setCustomPairText('');
-      setCustomPairTextNeg('');
-      setAddMode(null);
-      setShowAddForm(false);
-      await refreshDetalle(selectedCuestionario.id);
-      await fetchCuestionarios(selectedPeriodoId ?? undefined);
-    } catch (error: unknown) {
-      const msg = extractErrorMessage(error, 'Error al agregar preguntas');
-      showToast({ message: msg, type: 'error' });
-    } finally {
-      setIsAddingPregunta(false);
-    }
+        es_sociometrica: true,
+      },
+      orden: baseOrder + 2,
+    };
+
+    setEditablePreguntas([...editablePreguntas, newPosEntry, newNegEntry]);
+    showToast({ message: 'Par de preguntas agregadas (sin guardar)', type: 'info' });
+    setCustomPairText('');
+    setCustomPairTextNeg('');
+    setAddMode(null);
+    setShowAddForm(false);
   };
 
-  /** Editar texto de una pregunta copia dentro del cuestionario */
-  const handleSaveCopyEdit = async (preguntaId: number) => {
+  /** Editar texto de una pregunta — opera sobre la copia local, no va al backend */
+  const handleSaveCopyEdit = (preguntaId: number) => {
     if (editCopyText.trim().length < 10) {
       showToast({ message: 'La pregunta debe tener al menos 10 caracteres', type: 'error' });
       return;
     }
-    try {
-      await adminService.editarCopiaPregunta(preguntaId, { texto: editCopyText.trim() });
-      showToast({ message: 'Pregunta actualizada', type: 'success' });
-      setEditingCopyId(null);
-      setEditCopyText('');
-      if (selectedCuestionario) await refreshDetalle(selectedCuestionario.id);
-    } catch (error: unknown) {
-      const msg = extractErrorMessage(error, 'Error al editar pregunta');
-      showToast({ message: msg, type: 'error' });
-    }
+    setEditablePreguntas((prev) => {
+      if (!prev) return prev;
+      return prev.map((cp) =>
+        cp.pregunta.id === preguntaId
+          ? { ...cp, pregunta: { ...cp.pregunta, texto: editCopyText.trim() } }
+          : cp
+      );
+    });
+    showToast({ message: 'Texto editado (sin guardar)', type: 'info' });
+    setEditingCopyId(null);
+    setEditCopyText('');
   };
 
-  /** Cambiar la polaridad de una pregunta copia */
-  const handleToggleCopyPolaridad = async (preguntaId: number, currentPolaridad: string) => {
+  /** Cambiar la polaridad de una pregunta — opera sobre la copia local */
+  const handleToggleCopyPolaridad = (preguntaId: number, currentPolaridad: string) => {
     const newPolaridad = currentPolaridad === 'POSITIVA' ? 'NEGATIVA' : 'POSITIVA';
-    try {
-      await adminService.editarCopiaPregunta(preguntaId, { polaridad: newPolaridad as 'POSITIVA' | 'NEGATIVA' });
-      showToast({ message: `Polaridad cambiada a ${newPolaridad.toLowerCase()}`, type: 'success' });
-      if (selectedCuestionario) await refreshDetalle(selectedCuestionario.id);
-    } catch (error: unknown) {
-      const msg = extractErrorMessage(error, 'Error al cambiar polaridad');
-      showToast({ message: msg, type: 'error' });
-    }
+    setEditablePreguntas((prev) => {
+      if (!prev) return prev;
+      return prev.map((cp) =>
+        cp.pregunta.id === preguntaId
+          ? { ...cp, pregunta: { ...cp.pregunta, polaridad: newPolaridad as 'POSITIVA' | 'NEGATIVA' } }
+          : cp
+      );
+    });
+    showToast({ message: `Polaridad cambiada a ${newPolaridad.toLowerCase()} (sin guardar)`, type: 'info' });
   };
 
   /** Drag & drop para reordenar preguntas en el detalle */
   const detailDragItem = useRef<number | null>(null);
   const detailDragOverItem = useRef<number | null>(null);
+  const [detailDraggingIndex, setDetailDraggingIndex] = useState<number | null>(null);
+  const [detailDragOverIndex, setDetailDragOverIndex] = useState<number | null>(null);
 
   const handleDetailDragStart = (index: number) => {
     detailDragItem.current = index;
+    setDetailDraggingIndex(index);
   };
   const handleDetailDragEnter = (index: number) => {
     detailDragOverItem.current = index;
+    setDetailDragOverIndex(index);
   };
-  const handleDetailDragEnd = async () => {
+  const handleDetailDragEnd = () => {
     if (
       detailDragItem.current === null ||
       detailDragOverItem.current === null ||
       detailDragItem.current === detailDragOverItem.current ||
-      !selectedCuestionario?.preguntas
+      !editablePreguntas
     ) {
       detailDragItem.current = null;
       detailDragOverItem.current = null;
+      setDetailDraggingIndex(null);
+      setDetailDragOverIndex(null);
       return;
     }
-    // Reordenar localmente para feedback inmediato
-    const items = [...selectedCuestionario.preguntas];
+    // Reordenar sobre la copia local
+    const items = [...editablePreguntas];
     const draggedItem = items[detailDragItem.current];
     items.splice(detailDragItem.current, 1);
     items.splice(detailDragOverItem.current, 0, draggedItem);
-    // Actualizar orden local
     const reordered = items.map((item, idx) => ({ ...item, orden: idx + 1 }));
-    setSelectedCuestionario({ ...selectedCuestionario, preguntas: reordered });
+    setEditablePreguntas(reordered);
     detailDragItem.current = null;
     detailDragOverItem.current = null;
-    // Nota: Si existe un endpoint para guardar orden, se puede llamar aqui.
-    // Por ahora el orden se mantiene visualmente hasta que se recarga.
+    setDetailDraggingIndex(null);
+    setDetailDragOverIndex(null);
   };
 
   // Estado para confirmacion de eliminacion de pregunta individual
@@ -638,17 +666,111 @@ export function AdminCuestionariosView() {
     setPendingDeletePreguntaId(preguntaId);
   };
 
-  /** Confirmar y ejecutar la eliminacion */
-  const confirmDeletePregunta = async () => {
+  /** Confirmar y ejecutar la eliminacion — opera sobre la copia local, no va al backend */
+  const confirmDeletePregunta = () => {
     if (pendingDeletePreguntaId === null) return;
-    await handleRemoverPregunta(pendingDeletePreguntaId);
+    setEditablePreguntas((prev) => {
+      if (!prev) return prev;
+      return prev
+        .filter((cp) => cp.pregunta.id !== pendingDeletePreguntaId)
+        .map((cp, idx) => ({ ...cp, orden: idx + 1 }));
+    });
+    showToast({ message: 'Pregunta eliminada (sin guardar)', type: 'info' });
     setPendingDeletePreguntaId(null);
   };
 
   // Estado para modal de salida del modo edicion
   const [showEditExitConfirm, setShowEditExitConfirm] = useState(false);
 
-  /** Cancelar edicion — sale del modo edicion y recarga el detalle original */
+  /**
+   * Confirmar cambios — calcula diff entre editablePreguntas (local) y las preguntas
+   * originales del backend (selectedCuestionario.preguntas), y envía solo los cambios.
+   */
+  const handleConfirmEdits = async () => {
+    if (!selectedCuestionario || !editablePreguntas) return;
+    setIsConfirmingEdits(true);
+    try {
+      const original = selectedCuestionario.preguntas || [];
+      const edited = editablePreguntas;
+
+      // 1) Detectar preguntas eliminadas (están en original pero no en editablePreguntas)
+      const editedIds = new Set(edited.map((cp) => cp.pregunta.id));
+      const deletedCps = original.filter((cp) => !editedIds.has(cp.pregunta.id));
+
+      // 2) Detectar preguntas modificadas (texto o polaridad cambiados)
+      const originalMap = new Map(original.map((cp) => [cp.pregunta.id, cp]));
+      const modifiedCps = edited.filter((cp) => {
+        const orig = originalMap.get(cp.pregunta.id);
+        if (!orig) return false; // es nueva, no modificada
+        return (
+          orig.pregunta.texto !== cp.pregunta.texto ||
+          orig.pregunta.polaridad !== cp.pregunta.polaridad
+        );
+      });
+
+      // 3) Detectar preguntas nuevas (están en editablePreguntas pero no en original)
+      const originalIds = new Set(original.map((cp) => cp.pregunta.id));
+      const newCps = edited.filter((cp) => !originalIds.has(cp.pregunta.id));
+
+      // Ejecutar eliminaciones
+      for (const cp of deletedCps) {
+        await adminService.removerPregunta(selectedCuestionario.id, cp.pregunta.id);
+      }
+
+      // Ejecutar modificaciones (texto y/o polaridad)
+      for (const cp of modifiedCps) {
+        const orig = originalMap.get(cp.pregunta.id)!;
+        const payload: { texto?: string; polaridad?: PreguntaPolaridad } = {};
+        if (orig.pregunta.texto !== cp.pregunta.texto) {
+          payload.texto = cp.pregunta.texto;
+        }
+        if (orig.pregunta.polaridad !== cp.pregunta.polaridad) {
+          payload.polaridad = cp.pregunta.polaridad as PreguntaPolaridad;
+        }
+        await adminService.editarCopiaPregunta(cp.pregunta.id, payload);
+      }
+
+      // Ejecutar adiciones de preguntas nuevas (las que vinieron del banco localmente)
+      for (const cp of newCps) {
+        // Si tiene _bankId es una pregunta asociada del banco, si no es custom
+        const bankId = (cp as unknown as { _bankId?: number })._bankId;
+        if (bankId) {
+          await adminService.asociarPregunta(selectedCuestionario.id, { pregunta_id: bankId });
+        } else {
+          await adminService.agregarPregunta(selectedCuestionario.id, {
+            texto: cp.pregunta.texto,
+            tipo: cp.pregunta.tipo || 'SELECCION_ALUMNO',
+            polaridad: (cp.pregunta.polaridad as PreguntaPolaridad) || 'POSITIVA',
+            max_elecciones: cp.pregunta.max_elecciones || 3,
+          });
+        }
+      }
+
+      // Limpiar estado de edicion
+      setIsEditingDetail(false);
+      setShowAddForm(false);
+      setAddMode(null);
+      setEditingCopyId(null);
+      setEditCopyText('');
+      setEditablePreguntas(null);
+
+      // Recargar desde backend para tener IDs reales y estado correcto
+      await refreshDetalle(selectedCuestionario.id);
+      await fetchCuestionarios(selectedPeriodoId ?? undefined);
+
+      showToast({ message: 'Cambios guardados exitosamente', type: 'success' });
+    } catch (error: unknown) {
+      const msg = extractErrorMessage(error, 'Error al guardar los cambios');
+      showToast({ message: msg, type: 'error' });
+    } finally {
+      setIsConfirmingEdits(false);
+    }
+  };
+
+  /**
+   * Cancelar edicion — descarta la copia local y recarga el detalle real del backend.
+   * Como NADA fue al backend durante la edicion, simplemente se descarta todo.
+   */
   const handleCancelEditing = async () => {
     setIsEditingDetail(false);
     setShowAddForm(false);
@@ -656,10 +778,12 @@ export function AdminCuestionariosView() {
     setEditingCopyId(null);
     setEditCopyText('');
     setShowEditExitConfirm(false);
-    // Recargar el detalle para revertir cualquier cambio local (reordenar, etc.)
+    setEditablePreguntas(null);
+    // Recargar desde el backend para asegurar que se muestra el estado real
     if (selectedCuestionario) {
       await refreshDetalle(selectedCuestionario.id);
     }
+    showToast({ message: 'Cambios descartados', type: 'info' });
   };
 
   // ==========================================
@@ -1076,12 +1200,12 @@ export function AdminCuestionariosView() {
                   <AlertTriangle size={20} className="text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-black">Cancelar edicion</h3>
-                  <p className="text-sm text-gray-500">Perderas los cambios no guardados</p>
+                  <h3 className="font-bold text-black">Descartar cambios</h3>
+                  <p className="text-sm text-gray-500">Los cambios no se han guardado</p>
                 </div>
               </div>
               <p className="text-sm text-gray-600 mb-6">
-                ¿Estas seguro de que deseas salir del modo edicion? Los cambios de reorden que no se hayan guardado se perderan.
+                ¿Estas seguro de que deseas salir del modo edicion? Todos los cambios pendientes (eliminaciones, ediciones de texto y polaridad) se descartaran.
               </p>
               <div className="flex justify-end gap-3">
                 <button
@@ -1169,7 +1293,18 @@ export function AdminCuestionariosView() {
             {/* Editar (solo borrador sin respuestas, fuera de modo edicion) */}
             {canEdit && !isEditingDetail && (
               <button
-                onClick={() => setIsEditingDetail(true)}
+                onClick={() => {
+                  // Crear copia local de preguntas para editar sin tocar el backend
+                  if (selectedCuestionario?.preguntas) {
+                    setEditablePreguntas(
+                      selectedCuestionario.preguntas.map((cp) => ({
+                        ...cp,
+                        pregunta: { ...cp.pregunta },
+                      }))
+                    );
+                  }
+                  setIsEditingDetail(true);
+                }}
                 className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 transition-colors"
                 title="Editar cuestionario"
               >
@@ -1182,15 +1317,17 @@ export function AdminCuestionariosView() {
             {isEditingDetail && (
               <>
                 <button
-                  onClick={() => { setIsEditingDetail(false); setShowAddForm(false); setAddMode(null); setEditingCopyId(null); }}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#0F7E3C] text-white rounded-lg text-sm font-semibold hover:bg-[#0a6630] transition-colors"
+                  disabled={isConfirmingEdits}
+                  onClick={handleConfirmEdits}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[#0F7E3C] text-white rounded-lg text-sm font-semibold hover:bg-[#0a6630] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Check size={16} />
-                  <span className="hidden sm:inline">Confirmar cambios</span>
+                  {isConfirmingEdits ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  <span className="hidden sm:inline">{isConfirmingEdits ? 'Guardando...' : 'Confirmar cambios'}</span>
                 </button>
                 <button
                   onClick={handleCancelEditing}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#7A1501] text-white rounded-lg text-sm font-semibold hover:bg-[#5c1001] transition-colors"
+                  disabled={isConfirmingEdits}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[#7A1501] text-white rounded-lg text-sm font-semibold hover:bg-[#5c1001] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X size={16} />
                   <span className="hidden sm:inline">Cancelar cambios</span>
@@ -1215,7 +1352,7 @@ export function AdminCuestionariosView() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 ml-11 sm:ml-0">
           <MiniInfoCard
             label="Cantidad de preguntas"
-            value={selectedCuestionario.total_preguntas}
+            value={isEditingDetail && editablePreguntas ? editablePreguntas.length : selectedCuestionario.total_preguntas}
             icon={<FileText size={16} className="text-[#0F7E3C]" />}
           />
           <MiniInfoCard
@@ -1253,7 +1390,7 @@ export function AdminCuestionariosView() {
             {/* Header preguntas */}
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="font-bold text-black text-sm">
-                Preguntas del sociograma ({selectedCuestionario.preguntas?.length ?? 0})
+                Preguntas del sociograma ({(isEditingDetail && editablePreguntas ? editablePreguntas.length : selectedCuestionario.preguntas?.length) ?? 0})
               </h3>
               {isEditable && (
                 <button
@@ -1432,10 +1569,15 @@ export function AdminCuestionariosView() {
 
             {/* Lista de preguntas — mismo estilo visual que el banco de preguntas */}
             <div className="flex flex-col gap-2 p-3 sm:p-4 pb-6">
-              {selectedCuestionario.preguntas && selectedCuestionario.preguntas.length > 0 ? (
-                selectedCuestionario.preguntas.map((cp, idx) => (
+              {(() => {
+                // En modo edicion usamos la copia local, fuera de edicion usamos las del backend
+                const displayPreguntas = isEditingDetail && editablePreguntas
+                  ? editablePreguntas
+                  : selectedCuestionario.preguntas;
+                return displayPreguntas && displayPreguntas.length > 0 ? (
+                  displayPreguntas.map((cp, idx) => (
                     <DetailQuestionRow
-                      key={cp.id}
+                      key={cp.pregunta.id}
                       cp={cp}
                       index={idx}
                       isNegative={cp.pregunta.polaridad === 'NEGATIVA'}
@@ -1444,6 +1586,8 @@ export function AdminCuestionariosView() {
                       canEdit={isEditable}
                       isEditingText={editingCopyId === cp.pregunta.id}
                       editText={editingCopyId === cp.pregunta.id ? editCopyText : ''}
+                      isDragging={detailDraggingIndex === idx}
+                      isDragTarget={detailDragOverIndex === idx && detailDraggingIndex !== idx}
                       onStartEdit={() => { setEditingCopyId(cp.pregunta.id); setEditCopyText(cp.pregunta.texto); }}
                       onCancelEdit={() => { setEditingCopyId(null); setEditCopyText(''); }}
                       onSaveEdit={() => handleSaveCopyEdit(cp.pregunta.id)}
@@ -1455,20 +1599,21 @@ export function AdminCuestionariosView() {
                       onDragEnd={handleDetailDragEnd}
                     />
                   ))
-              ) : (
-                <div className="px-5 py-10 text-center">
-                  <FileText size={32} className="mx-auto text-gray-300 mb-3" />
-                  <p className="text-sm text-gray-400">No hay preguntas todavia</p>
-                  {isEditable && (
-                    <button
-                      onClick={() => setShowAddForm(true)}
-                      className="mt-3 text-sm font-semibold text-[#0F7E3C] hover:underline"
-                    >
-                      Agregar la primera pregunta
-                    </button>
-                  )}
-                </div>
-              )}
+                ) : (
+                  <div className="px-5 py-10 text-center">
+                    <FileText size={32} className="mx-auto text-gray-300 mb-3" />
+                    <p className="text-sm text-gray-400">No hay preguntas todavia</p>
+                    {isEditable && (
+                      <button
+                        onClick={() => setShowAddForm(true)}
+                        className="mt-3 text-sm font-semibold text-[#0F7E3C] hover:underline"
+                      >
+                        Agregar la primera pregunta
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -1560,6 +1705,8 @@ interface DetailQuestionRowProps {
   canEdit: boolean;
   isEditingText: boolean;
   editText: string;
+  isDragging: boolean;
+  isDragTarget: boolean;
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onSaveEdit: () => void;
@@ -1573,14 +1720,32 @@ interface DetailQuestionRowProps {
 
 function DetailQuestionRow({
   cp, index, isNegative, canDelete, canDrag, canEdit,
-  isEditingText, editText, onStartEdit, onCancelEdit, onSaveEdit, onEditTextChange,
+  isEditingText, editText, isDragging, isDragTarget,
+  onStartEdit, onCancelEdit, onSaveEdit, onEditTextChange,
   onDelete, onTogglePolaridad, onDragStart, onDragEnter, onDragEnd
 }: DetailQuestionRowProps) {
   const isPos = !isNegative;
 
   return (
+    <div>
+      {/* Espaciador animado — aparece cuando este item es destino del drag */}
+      {canDrag && (
+        <div
+          className="transition-all duration-200 overflow-hidden"
+          style={{ height: isDragTarget ? '52px' : '0px', marginBottom: isDragTarget ? '8px' : '0px' }}
+        >
+          {isDragTarget && (
+            <div className="h-full rounded-lg border-2 border-dashed border-[#0F7E3C]/50 bg-[#0F7E3C]/5 flex items-center justify-center">
+              <span className="text-xs font-medium text-[#0F7E3C]/60">Soltar aqui</span>
+            </div>
+          )}
+        </div>
+      )}
+
     <div
-      className="flex items-start gap-2 sm:gap-3 py-1 group"
+      className={`flex items-start gap-2 sm:gap-3 py-1 group transition-all duration-200 ${
+        isDragging ? 'opacity-40 scale-[0.97] cursor-grabbing' : 'opacity-100 scale-100'
+      }`}
       draggable={canDrag}
       onDragStart={() => onDragStart(index)}
       onDragEnter={() => onDragEnter(index)}
@@ -1705,6 +1870,7 @@ function DetailQuestionRow({
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }
@@ -1864,7 +2030,7 @@ function ConfirmModal({ action, isLoading, onConfirm, onCancel }: ConfirmModalPr
     activar: (
       <>
         Al activar <strong>"{action.cuestionario.titulo}"</strong> los tutores podran verlo y asignarlo
-        a sus grupos. Si hay otro cuestionario activo se desactivara automaticamente.
+        a sus grupos.
         <strong> Una vez activo no se podra editar.</strong>
       </>
     ),
