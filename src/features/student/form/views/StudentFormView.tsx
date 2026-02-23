@@ -1,102 +1,258 @@
 /**
  * Vista del Formulario de Estudiante - Sociograma UTP
- * Diseño responsivo (PC, Tablet, Mobile)
+ * Carga preguntas reales desde backend y envía respuestas del alumno.
  */
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../../../store';
-import { useStudentFormStore } from '../../store/studentForm.store';
+import { studentService } from '../../services';
 import {
   SurveyHeader,
   SurveyForm,
   DecorativeCircles,
   SuccessMessage,
 } from '../components';
-import type { Student } from '../../types/studentForm.types';
+import type { Question, QuestionAnswer, Student } from '../../types/studentForm.types';
+import type { StudentQuestion } from '../../types';
 
-// Estudiantes de ejemplo
-const EXAMPLE_STUDENTS: Student[] = [
-  { id: '1', name: 'Ana Martínez Sánchez' },
-  { id: '2', name: 'Carlos Ramírez López' },
-  { id: '3', name: 'Luis Hernández García' },
-  { id: '4', name: 'María González Torres' },
-  { id: '5', name: 'Pedro López Ramírez' },
-  { id: '6', name: 'Sofía Díaz Morales' },
-  { id: '7', name: 'José García Ruiz' },
-  { id: '8', name: 'Laura Fernández Castro' },
-  { id: '9', name: 'Miguel Sánchez Pérez' },
-  { id: '10', name: 'Carmen Rodríguez Silva' },
-  { id: '11', name: 'Roberto Jiménez Ortiz' },
-  { id: '12', name: 'Patricia Torres Vega' },
-  { id: '13', name: 'Fernando Álvarez Rojas' },
-  { id: '14', name: 'Isabel Romero Navarro' },
-  { id: '15', name: 'Andrés Muñoz Castillo' },
-  { id: '16', name: 'Gabriela Cruz Mendoza' },
-  { id: '17', name: 'Diego Vargas Herrera' },
-  { id: '18', name: 'Valentina Reyes Campos' },
-  { id: '19', name: 'Ricardo Flores Guerrero' },
-  { id: '20', name: 'Daniela Medina Aguilar' },
-  { id: '21', name: 'Javier Molina Ríos' },
-  { id: '22', name: 'Andrea Gutiérrez León' },
-  { id: '23', name: 'Alejandro Castro Ramos' },
-  { id: '24', name: 'Natalia Ortiz Delgado' },
-  { id: '25', name: 'Emilio Peña Carrillo' },
-  { id: '26', name: 'Carolina Vázquez Salazar' },
-  { id: '27', name: 'Sergio Mendez Cortés' },
-  { id: '28', name: 'Paola Ruiz Montero' },
-  { id: '29', name: 'Raúl Domínguez Paredes' },
-  { id: '30', name: 'Lucía Herrera Espinoza' },
-  { id: '31', name: 'Omar Moreno Fuentes' },
-  { id: '32', name: 'Diana Soto Villanueva' },
-  { id: '33', name: 'Héctor Ríos Sandoval' },
-  { id: '34', name: 'Mónica Durán Cabrera' },
-  { id: '35', name: 'Eduardo Estrada Pineda' },
-  { id: '36', name: 'Rosa Juárez Contreras' },
-  { id: '37', name: 'Víctor Cervantes Ibarra' },
-  { id: '38', name: 'Mariana Lara Montes' },
-  { id: '39', name: 'Jorge Acosta Velázquez' },
-  { id: '40', name: 'Teresa Campos Delgado' },
-];
+function extractErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const axiosError = error as { response?: { data?: Record<string, unknown> } };
+    const data = axiosError.response?.data;
+    if (data) {
+      if (typeof data.error === 'string') return data.error;
+      if (typeof data.detail === 'string') return data.detail;
+      if (typeof data.message === 'string') return data.message;
+    }
+  }
+
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
+
+function createInitialAnswers(questions: Question[]): Record<number, QuestionAnswer> {
+  return questions.reduce<Record<number, QuestionAnswer>>((acc, question) => {
+    acc[question.id] = {
+      firstPlace: null,
+      secondPlace: null,
+      thirdPlace: null,
+    };
+    return acc;
+  }, {});
+}
 
 export const StudentFormView = () => {
+  const navigate = useNavigate();
+  const { cuestionarioId } = useParams<{ cuestionarioId?: string }>();
   const { user } = useAuthStore();
 
-  const {
-    answers,
-    isSubmitting,
-    error,
-    submitSuccess,
-    initializeForm,
-    setAnswer,
-    submitSurvey,
-    getQuestions,
-  } = useStudentFormStore();
+  const [groupName, setGroupName] = useState('');
+  const [questionnaireTitle, setQuestionnaireTitle] = useState('');
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [rawQuestions, setRawQuestions] = useState<StudentQuestion[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [answers, setAnswers] = useState<Record<number, QuestionAnswer>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [unsupportedError, setUnsupportedError] = useState<string | null>(null);
 
-  const questions = getQuestions();
+  const questionnaireId = useMemo(() => {
+    const parsed = Number(cuestionarioId);
+    if (!Number.isFinite(parsed) || parsed <= 0) return null;
+    return parsed;
+  }, [cuestionarioId]);
 
-  // Inicializar el formulario al montar
   useEffect(() => {
-    initializeForm();
-  }, [initializeForm]);
+    let cancelled = false;
 
-  // Estado de error
-  if (error) {
+    const fetchQuestionnaire = async () => {
+      if (!questionnaireId) {
+        setError('No se recibió un cuestionario válido para responder.');
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      setUnsupportedError(null);
+      setSubmitSuccess(false);
+
+      try {
+        const response = await studentService.getQuestionnaireQuestions(questionnaireId);
+        if (cancelled) return;
+
+        const mappedQuestions: Question[] = response.preguntas.map((question) => ({
+          id: question.id,
+          text: question.texto,
+          // El diseño actual no usa esta propiedad para renderizar lógica.
+          type: 'positive',
+        }));
+
+        const mappedStudents: Student[] = response.companeros.map((classmate) => ({
+          id: String(classmate.id),
+          name: `${classmate.nombre} (${classmate.matricula})`,
+        }));
+
+        const hasUnsupportedQuestion = response.preguntas.some(
+          (question) => question.tipo !== 'SELECCION_ALUMNO' || question.max_elecciones !== 3
+        );
+
+        setGroupName(response.grupo_clave);
+        setQuestionnaireTitle(response.cuestionario_titulo);
+        setRawQuestions(response.preguntas);
+        setQuestions(mappedQuestions);
+        setStudents(mappedStudents);
+        setAnswers(createInitialAnswers(mappedQuestions));
+
+        if (hasUnsupportedQuestion) {
+          setUnsupportedError(
+            'Este cuestionario incluye preguntas que esta pantalla aún no soporta (distintas a selección de 3 compañeros).'
+          );
+        }
+      } catch (fetchError) {
+        if (cancelled) return;
+        setError(
+          extractErrorMessage(
+            fetchError,
+            'No se pudo cargar el cuestionario. Regresa al panel e inténtalo de nuevo.'
+          )
+        );
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchQuestionnaire();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [questionnaireId]);
+
+  const setAnswer = useCallback(
+    (
+      questionId: number,
+      place: 'firstPlace' | 'secondPlace' | 'thirdPlace',
+      studentIdValue: string | null
+    ) => {
+      setAnswers((prev) => ({
+        ...prev,
+        [questionId]: {
+          ...(prev[questionId] ?? {
+            firstPlace: null,
+            secondPlace: null,
+            thirdPlace: null,
+          }),
+          [place]: studentIdValue,
+        },
+      }));
+    },
+    []
+  );
+
+  const submitSurvey = useCallback(async () => {
+    if (!questionnaireId || isSubmitting || unsupportedError) return;
+
+    const hasMissingAnswers = questions.some((question) => {
+      const answer = answers[question.id];
+      return !answer?.firstPlace || !answer?.secondPlace || !answer?.thirdPlace;
+    });
+
+    if (hasMissingAnswers) {
+      setError('Debes completar todas las preguntas antes de enviar.');
+      return;
+    }
+
+    if (rawQuestions.length !== questions.length) {
+      setError('La estructura del cuestionario cambió. Recarga e inténtalo de nuevo.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const payload = {
+        respuestas: questions.map((question) => {
+          const answer = answers[question.id];
+          return {
+            pregunta_id: question.id,
+            seleccionados: [
+              { alumno_id: Number(answer.firstPlace), orden: 1 },
+              { alumno_id: Number(answer.secondPlace), orden: 2 },
+              { alumno_id: Number(answer.thirdPlace), orden: 3 },
+            ],
+          };
+        }),
+      };
+
+      const response = await studentService.submitQuestionnaire(questionnaireId, payload);
+      if (!response.success) {
+        setError(response.error || response.message || 'No se pudo enviar el cuestionario.');
+        return;
+      }
+
+      setSubmitSuccess(true);
+    } catch (submitError) {
+      setError(
+        extractErrorMessage(
+          submitError,
+          'No se pudo enviar tu cuestionario en este momento. Intenta nuevamente.'
+        )
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [answers, isSubmitting, questions, questionnaireId, rawQuestions.length, unsupportedError]);
+
+  if (isLoading) {
     return (
       <div className="w-full min-h-screen flex items-center justify-center bg-white p-4">
-        <div className="max-w-md p-8 bg-red-50 border-2 border-red-200 rounded-2xl text-center">
-          <h2 className="text-red-600 text-2xl font-bold font-lato mb-4">Error</h2>
-          <p className="text-red-500 text-lg font-medium">{error}</p>
+        <div className="max-w-md p-8 bg-white border border-[#0F7E3C]/30 rounded-2xl text-center shadow-sm">
+          <h2 className="text-[#0F7E3C] text-2xl font-bold font-lato mb-4">Cargando</h2>
+          <p className="text-[#245C52] text-lg font-medium">Preparando tu cuestionario...</p>
         </div>
       </div>
     );
   }
 
-  // Estado de éxito
   if (submitSuccess) {
     return (
       <div className="w-full min-h-screen flex items-center justify-center bg-white p-4 relative overflow-hidden">
         <DecorativeCircles />
-        <SuccessMessage studentName={user?.nombre_completo || ''} />
+        <div className="relative z-10 flex flex-col items-center gap-4">
+          <SuccessMessage studentName={user?.nombre_completo || ''} />
+          <button
+            type="button"
+            onClick={() => navigate('/student')}
+            className="rounded-lg bg-[#0F7E3C] px-6 py-2.5 text-white font-semibold hover:bg-[#0c6a33] transition-colors"
+          >
+            Volver al panel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!questionnaireId) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center bg-white p-4">
+        <div className="max-w-lg p-8 bg-red-50 border-2 border-red-200 rounded-2xl text-center space-y-4">
+          <h2 className="text-red-700 text-2xl font-bold font-lato">No se puede abrir el formulario</h2>
+          <p className="text-red-600 text-base">{error ?? 'Falta el identificador del cuestionario.'}</p>
+          <button
+            type="button"
+            onClick={() => navigate('/student')}
+            className="rounded-lg bg-[#0F7E3C] px-6 py-2.5 text-white font-semibold hover:bg-[#0c6a33] transition-colors"
+          >
+            Regresar al panel
+          </button>
+        </div>
       </div>
     );
   }
@@ -109,18 +265,38 @@ export const StudentFormView = () => {
       {/* Contenido principal */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 py-8 sm:py-12 md:py-16 lg:py-20 flex flex-col items-center gap-6 sm:gap-8">
         {/* Header con logos, título e instrucciones */}
-        <SurveyHeader groupName="" />
+        <SurveyHeader groupName={groupName || questionnaireTitle} />
+
+        {questionnaireTitle && (
+          <div className="w-full max-w-5xl px-2">
+            <p className="text-[#245C52] text-base sm:text-lg md:text-xl font-semibold">
+              Cuestionario: {questionnaireTitle}
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="w-full max-w-5xl rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-red-700 text-sm sm:text-base">
+            {error}
+          </div>
+        )}
+
+        {unsupportedError && (
+          <div className="w-full max-w-5xl rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 text-sm sm:text-base">
+            {unsupportedError}
+          </div>
+        )}
 
         {/* Formulario con preguntas */}
         <SurveyForm
           studentName={user?.nombre_completo || ''}
-          studentId={user?.alumno?.matricula || user?.username || ''}
+          studentId={String(user?.alumno?.id ?? '')}
           questions={questions}
-          students={EXAMPLE_STUDENTS}
+          students={students}
           answers={answers}
           onAnswerChange={setAnswer}
           onSubmit={submitSurvey}
-          isSubmitting={isSubmitting}
+          isSubmitting={isSubmitting || !!unsupportedError}
         />
       </div>
     </div>

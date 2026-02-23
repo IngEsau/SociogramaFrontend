@@ -188,6 +188,15 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
   },
+  {
+    // Ruta con ID de cuestionario para responder una encuesta concreta
+    path: '/student-form/:cuestionarioId',
+    element: (
+      <RoleProtectedRoute allowedRoles={['ALUMNO', 'DOCENTE', 'ADMIN']}>
+        <StudentFormView />
+      </RoleProtectedRoute>
+    ),
+  },
   // ============================================
   // FALLBACK: 404
   // ============================================
