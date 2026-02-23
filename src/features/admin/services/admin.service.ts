@@ -31,6 +31,7 @@ import type {
   BancoActionResponse,
   AsociarPreguntaRequest,
 } from '../types';
+import type { EstadisticasResponse } from '../../sociogram/types';
 
 export interface User {
   id: number;
@@ -52,6 +53,14 @@ export interface Group {
     nombre: string;
   };
   alumnos_count: number;
+}
+
+export interface TutorGroupSummary {
+  id: number;
+  clave: string;
+  periodo_codigo?: string;
+  periodo_nombre?: string;
+  total_alumnos: number;
 }
 
 export const adminService = {
@@ -90,6 +99,18 @@ export const adminService = {
   async getGroups(): Promise<Group[]> {
     const response = await api.get('/admin/groups/');
     return response.data;
+  },
+
+  /**
+   * Grupos asignados al tutor autenticado.
+   * Nota: este endpoint requiere perfil docente tutor.
+   */
+  async getMyTutorGroups(): Promise<TutorGroupSummary[]> {
+    const response = await api.get<{
+      success: boolean;
+      grupos: TutorGroupSummary[];
+    }>('/academic/my-groups/');
+    return response.data.grupos ?? [];
   },
 
   // ==========================================
@@ -195,6 +216,19 @@ export const adminService = {
   async getCuestionario(id: number): Promise<Cuestionario> {
     const response = await api.get<{ cuestionario: Cuestionario }>(`/admin/cuestionarios/${id}/`);
     return response.data.cuestionario;
+  },
+
+  /**
+   * Obtener estadisticas sociometricas para renderizar el grafo.
+   * Endpoint actual expuesto por backend en el modulo academic.
+   */
+  async getCuestionarioEstadisticas(cuestionarioId: number, grupoId?: number): Promise<EstadisticasResponse> {
+    const params = grupoId ? { grupo_id: grupoId } : undefined;
+    const response = await api.get<EstadisticasResponse>(
+      `/academic/cuestionarios/${cuestionarioId}/estadisticas/`,
+      { params }
+    );
+    return response.data;
   },
 
   /** Crear cuestionario con preguntas inline */

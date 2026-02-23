@@ -12,7 +12,12 @@ export { SociogramGraph, SociogramLegend, MetricsPanel } from './components';
 export { useSociogram } from './hooks';
 
 // Utils
-export { calculateMetrics, normalizeGraphData } from './utils';
+export {
+  calculateMetrics,
+  normalizeGraphData,
+  mapGrupoEstadisticasToSociogramData,
+  createDemoEstadisticasResponse,
+} from './utils';
 
 // Types
 export * from './types';

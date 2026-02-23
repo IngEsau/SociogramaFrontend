@@ -11,6 +11,7 @@ import DashboardLayout from '../layouts/DashboardLayout/DashboardLayout';
 
 // Feature views por rol
 import {
+  AdminPanelView,
   AdminDashboardView,
   AdminDatabaseImportView,
   AdminImportHubView,
@@ -99,7 +100,8 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
     children: [
-      { index: true, element: <AdminDashboardView /> },
+      { index: true, element: <AdminPanelView /> },
+      { path: 'panel-legacy', element: <AdminDashboardView /> },
       { path: 'import', element: <AdminImportHubView /> },
       { path: 'import/excel', element: <AdminExcelImportView /> },
       { path: 'import/:type', element: <AdminCsvImportView /> },
@@ -186,7 +188,6 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
   },
-
   // ============================================
   // FALLBACK: 404
   // ============================================

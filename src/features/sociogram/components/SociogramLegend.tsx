@@ -1,75 +1,72 @@
 /**
- * Leyenda del sociograma
- * 
- * Muestra la interpretación de colores y símbolos del grafo
+ * Leyenda visual del sociograma.
  */
 
 interface SociogramLegendProps {
   className?: string;
-  showElecciones?: boolean;
-  showRechazos?: boolean;
 }
 
-export function SociogramLegend({
-  className = '',
-  showElecciones = true,
-  showRechazos = true,
-}: SociogramLegendProps) {
+function LegendNode({
+  label,
+  gradient,
+}: {
+  label: string;
+  gradient: string;
+}) {
   return (
-    <div className={`bg-white rounded-xl border border-emerald-600/35 p-4 ${className}`}>
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Leyenda</h3>
-      
-      {/* Tipos de nodos */}
-      <div className="space-y-2 mb-4">
-        <p className="text-xs text-gray-500 font-medium">Tipos de nodo</p>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-green-500"></span>
-            <span>Líder</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-            <span>Popular</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-gray-500"></span>
-            <span>Normal</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-            <span>Aislado</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-500"></span>
-            <span>Rechazado</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Tipos de conexiones */}
-      <div className="space-y-2">
-        <p className="text-xs text-gray-500 font-medium">Conexiones</p>
-        <div className="space-y-1 text-xs">
-          {showElecciones && (
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-0.5 bg-green-500"></span>
-              <span>Elección</span>
-            </div>
-          )}
-          {showRechazos && (
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-0.5 bg-red-500 border-dashed"></span>
-              <span>Rechazo</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-1 bg-blue-500"></span>
-            <span>Recíproco</span>
-          </div>
-        </div>
-      </div>
+    <div className="flex items-center gap-3">
+      <span
+        className="h-8 w-8 rounded-full border border-black/25 shadow-[inset_-6px_-6px_14px_rgba(0,0,0,0.32)]"
+        style={{ background: gradient }}
+      />
+      <span className="text-xs text-gray-700">{label}</span>
     </div>
   );
 }
 
+export function SociogramLegend({ className = '' }: SociogramLegendProps) {
+  return (
+    <aside className={`border-l border-black/20 pl-4 xl:pl-5 ${className}`}>
+      <h3 className="mb-4 text-sm font-semibold text-gray-800">Leyenda</h3>
+
+      <div className="space-y-3">
+        <LegendNode
+          label="Aceptado"
+          gradient="radial-gradient(circle at 30% 25%, #2C8E80 0%, #0C5B4F 58%, #003A33 100%)"
+        />
+        <LegendNode
+          label="Rechazado"
+          gradient="radial-gradient(circle at 30% 25%, #7F2A2A 0%, #5B0D0D 58%, #3A0404 100%)"
+        />
+        <LegendNode
+          label="Neutro / Invisible"
+          gradient="radial-gradient(circle at 30% 25%, #7A7F87 0%, #4A4F56 58%, #2E3136 100%)"
+        />
+      </div>
+
+      <div className="my-4 h-px bg-black/15" />
+
+      <div className="space-y-3 text-xs text-gray-700">
+        <div className="flex items-center gap-3">
+          <span className="h-8 w-8 rounded-full border border-dashed border-black/35 bg-white/70" />
+          <span>+ Impacto</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="h-5 w-5 rounded-full border border-dashed border-black/35 bg-white/70" />
+          <span>- Impacto</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <svg width="56" height="10" viewBox="0 0 56 10" fill="none" aria-hidden>
+            <path d="M1 5H55" stroke="#202328" strokeWidth="1.5" />
+            <path d="M7 2L1 5L7 8" stroke="#202328" strokeWidth="1.5" />
+            <path d="M49 2L55 5L49 8" stroke="#202328" strokeWidth="1.5" />
+          </svg>
+          <span>Conexiones fuertes</span>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
 export default SociogramLegend;
+

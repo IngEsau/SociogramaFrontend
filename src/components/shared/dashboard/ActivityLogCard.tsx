@@ -11,6 +11,7 @@ interface ActivityItem {
 
 interface ActivityLogCardProps {
   items?: ActivityItem[];
+  emptyMessage?: string;
 }
 
 const defaultItems: ActivityItem[] = [
@@ -41,24 +42,31 @@ const defaultItems: ActivityItem[] = [
   },
 ];
 
-export function ActivityLogCard({ items = defaultItems }: ActivityLogCardProps) {
+export function ActivityLogCard({
+  items = defaultItems,
+  emptyMessage = 'Sin actividad registrada todavía.',
+}: ActivityLogCardProps) {
   return (
     <div className="bg-white border border-emerald-600/35 rounded-xl shadow-sm p-5">
       <h2 className="text-green-700 font-semibold text-lg mb-3">
         Registro de actividades
       </h2>
 
-      <ul className="space-y-2 text-sm text-gray-700">
-        {items.map((it, idx) => (
-          <li key={idx} className="flex gap-2">
-            <span className="text-gray-400">•</span>
-            <div>
-              <span className="font-semibold">{it.name}</span> {it.action}{" "}
-              <span className="text-gray-400">{it.time}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {items.length === 0 ? (
+        <p className="text-sm text-gray-500">{emptyMessage}</p>
+      ) : (
+        <ul className="space-y-2 text-sm text-gray-700">
+          {items.map((it, idx) => (
+            <li key={idx} className="flex gap-2">
+              <span className="text-gray-400">•</span>
+              <div>
+                <span className="font-semibold">{it.name}</span> {it.action}{' '}
+                <span className="text-gray-400">{it.time}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
