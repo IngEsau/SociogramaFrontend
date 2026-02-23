@@ -40,19 +40,28 @@ interface PanelTopbarControlsProps {
 interface ActivityItem {
   name: string;
   action: string;
-  time: string;
+  time?: string;
+  startDate?: string;
+  endDate?: string;
+  approxMinutes?: number | null;
 }
 
-function formatActivityTimestamp(value?: string | null): string {
-  if (!value) return 'Sin marca de tiempo (API)';
+function parseDate(value?: string | null): Date | null {
+  if (!value) return null;
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Sin marca de tiempo (API)';
+  if (Number.isNaN(date.getTime())) return null;
 
+  return date;
+}
+
+function formatActivityDateTime(value?: string | null): string | null {
+  const date = parseDate(value);
+  if (!date) return null;
+
+  const day = date.getDate();
   const hours = date.getHours().toString().padStart(2, '0');
   const minutes = date.getMinutes().toString().padStart(2, '0');
-  const seconds = date.getSeconds().toString().padStart(2, '0');
-  const day = date.getDate();
   const months = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
@@ -60,7 +69,16 @@ function formatActivityTimestamp(value?: string | null): string {
   const month = months[date.getMonth()];
   const year = date.getFullYear();
 
-  return `${hours}:${minutes}:${seconds} a ${day} del ${month} del ${year}`;
+  return `${day} de ${month} de ${year} ${hours}:${minutes}`;
+}
+
+function getApproxMinutes(start?: string | null, end?: string | null): number | null {
+  const startDate = parseDate(start);
+  const endDate = parseDate(end);
+  if (!startDate || !endDate) return null;
+
+  const diffMs = Math.max(0, endDate.getTime() - startDate.getTime());
+  return Math.max(1, Math.round(diffMs / 60000));
 }
 
 function extractErrorMessage(error: unknown, fallback: string): string {
@@ -234,13 +252,19 @@ export function AdminPanelView() {
       .filter((nodo) => nodo.completo || nodo.elecciones_realizadas > 0)
       .sort((a, b) => Number(b.completo) - Number(a.completo) || b.elecciones_realizadas - a.elecciones_realizadas)
       .slice(0, 10)
-      .map((nodo) => ({
-        name: nodo.nombre,
-        action: nodo.completo ? 'ha finalizado el formulario.' : 'ha comenzado a realizar el formulario.',
-        time: formatActivityTimestamp(
-          nodo.completo ? nodo.fecha_completado : nodo.fecha_inicio
-        ),
-      }));
+      .map((nodo) => {
+        const startDate = formatActivityDateTime(nodo.fecha_inicio);
+        const endDate = formatActivityDateTime(nodo.fecha_completado);
+
+        return {
+          name: nodo.nombre,
+          action: nodo.completo ? 'ha finalizado el formulario.' : 'ha comenzado a realizar el formulario.',
+          time: startDate || endDate || 'Fecha no disponible',
+          startDate: startDate ?? undefined,
+          endDate: endDate ?? undefined,
+          approxMinutes: getApproxMinutes(nodo.fecha_inicio, nodo.fecha_completado),
+        };
+      });
 
     return mapped;
   }, [selectedGrupo]);

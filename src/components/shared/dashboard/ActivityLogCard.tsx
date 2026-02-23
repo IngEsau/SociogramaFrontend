@@ -6,7 +6,10 @@
 interface ActivityItem {
   name: string;
   action: string;
-  time: string;
+  time?: string;
+  startDate?: string;
+  endDate?: string;
+  approxMinutes?: number | null;
 }
 
 interface ActivityLogCardProps {
@@ -59,9 +62,29 @@ export function ActivityLogCard({
           {items.map((it, idx) => (
             <li key={idx} className="flex gap-2">
               <span className="text-gray-400">•</span>
-              <div>
+              <div className="min-w-0">
                 <span className="font-semibold">{it.name}</span> {it.action}{' '}
-                <span className="text-gray-400">{it.time}</span>
+                {it.time && <span className="text-gray-400">{it.time}</span>}
+
+                {(it.startDate || it.endDate || typeof it.approxMinutes === 'number') && (
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                    {it.startDate && (
+                      <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5">
+                        Fecha inicio: {it.startDate}
+                      </span>
+                    )}
+                    {it.endDate && (
+                      <span className="rounded border border-sky-200 bg-sky-50 px-2 py-0.5">
+                        Fecha fin: {it.endDate}
+                      </span>
+                    )}
+                    {typeof it.approxMinutes === 'number' && (
+                      <span className="rounded border border-gray-200 bg-gray-50 px-2 py-0.5">
+                        ~{it.approxMinutes} min aprox
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </li>
           ))}
