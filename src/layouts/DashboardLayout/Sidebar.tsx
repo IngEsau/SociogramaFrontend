@@ -40,6 +40,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   };
 
   const basePath = getBasePath();
+  const settingsPath = basePath === '/' ? '/login' : `${basePath}/settings`;
 
   const handleLogout = async () => {
     await logout();
@@ -142,7 +143,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <Divider />
 
         <div className="px-2 py-2 flex flex-col gap-1">
-          <NavItemButton icon={<Settings size={20} />} label="Configuración" />
+          <NavItem
+            icon={<Settings size={20} />}
+            label="Configuración"
+            to={settingsPath}
+            isActive={location.pathname === settingsPath}
+            onClick={onClose}
+          />
           <NavItemButton 
             icon={<LogOut size={20} />} 
             label="Salir" 

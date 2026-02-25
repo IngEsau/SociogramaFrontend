@@ -24,6 +24,7 @@ import {
 } from '../features/admin';
 import { TutorDashboardView, TutorPanelView, TutorArchivosView, TutorActivityView } from '../features/tutor';
 import { StudentDashboardView, StudentFormView } from '../features/student';
+import { SettingsView } from '../features/settings';
 
 // COMITÉ: Rol en revisión - puede fusionarse con ADMIN
 // Importar solo si COMMITTEE_ROLE_ENABLED = true en roleRouting.ts
@@ -101,6 +102,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <AdminPanelView /> },
+      { path: 'settings', element: <SettingsView /> },
       { path: 'panel-legacy', element: <AdminDashboardView /> },
       { path: 'import', element: <AdminImportHubView /> },
       { path: 'import/excel', element: <AdminExcelImportView /> },
@@ -127,6 +129,8 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
     children: [
+      { index: true, element: <TutorDashboardView /> },
+      { path: 'settings', element: <SettingsView /> },
       { index: true, element: <TutorPanelView /> },
       { path: 'dashboard', element: <TutorDashboardView /> },
       { path: 'archivos', element: <TutorArchivosView /> },
@@ -150,6 +154,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <StudentDashboardView /> },
+      { path: 'settings', element: <SettingsView /> },
       // para que tenga su propio diseño a pantalla completa
     ],
   },
@@ -170,6 +175,7 @@ export const router = createBrowserRouter([
           ),
           children: [
             { index: true, element: <CommitteeDashboardView /> },
+            { path: 'settings', element: <SettingsView /> },
             // Aquí irán más rutas de comité:
             // { path: 'supervision', element: <GlobalSociograms /> },
           ],
