@@ -36,9 +36,12 @@ export interface UserResponse {
   nombre_completo: string;
   first_name: string;
   last_name: string;
-  rol: 'ALUMNO' | 'DOCENTE' | 'ACADEMICO' | 'ADMIN';
+  rol: 'ALUMNO' | 'DOCENTE' | 'ACADEMICO' | 'ADMIN' | 'COMITE';
   genero: 'Masculino' | 'Femenino' | 'Otro';
   is_staff: boolean;
+  telefono?: string | null;
+  fecha_nacimiento?: string | null;
+  is_active?: boolean;
   alumno?: AlumnoInfo;
   docente?: DocenteInfo;
 }
@@ -58,7 +61,7 @@ export interface RegisterData {
   password2: string;
   first_name: string;
   last_name: string;
-  rol: 'ALUMNO' | 'DOCENTE' | 'ACADEMICO' | 'ADMIN';
+  rol: 'ALUMNO' | 'DOCENTE' | 'ACADEMICO' | 'ADMIN' | 'COMITE';
   genero: 'Masculino' | 'Femenino' | 'Otro';
 }
 
