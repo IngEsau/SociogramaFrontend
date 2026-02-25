@@ -65,6 +65,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (userRole === 'DOCENTE') {
       return [
         ...commonItems,
+        { icon: <Folder size={20} />, label: 'Archivos', to: `${basePath}/archivos` },
         { icon: <ClipboardList size={20} />, label: 'Actividad', to: `${basePath}/activity` },
       ];
     }

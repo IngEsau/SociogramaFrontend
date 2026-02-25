@@ -5,7 +5,7 @@
  */
 
 // Views
-export { TutorDashboardView, NoTutorAccessView } from './views';
+export { TutorDashboardView, TutorPanelView, TutorArchivosView, TutorActivityView, NoTutorAccessView } from './views';
 
 // Services
 export { tutorService } from './services';

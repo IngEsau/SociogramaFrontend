@@ -7,6 +7,7 @@
 // Views
 export {
   AdminDashboardView,
+  AdminPanelView,
   AdminDatabaseImportView,
   AdminImportHubView,
   AdminExcelImportView,

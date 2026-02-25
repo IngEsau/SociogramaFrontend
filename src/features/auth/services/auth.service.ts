@@ -53,19 +53,21 @@ export const authService = {
   async logout(): Promise<void> {
     const refreshToken = localStorage.getItem('refresh_token');
 
-    if (refreshToken) {
-      try {
-        await api.post('/auth/logout/', { refresh: refreshToken } as LogoutData);
-      } catch (error) {
-        // Ignorar error si el token ya expiró
-        console.warn('Logout request failed:', error);
-      }
-    }
-
-    // Limpiar localStorage siempre
+    // Limpiar localStorage ANTES de la petición para evitar
+    // que un fallo en logout deje tokens residuales que generen ciclos
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    localStorage.removeItem('first_login');
+    localStorage.removeItem('auth-storage');
+
+    if (refreshToken) {
+      try {
+        await api.post('/auth/logout/', { refresh: refreshToken } as LogoutData);
+      } catch {
+        // Ignorar error: la sesión local ya fue limpiada
+      }
+    }
   },
 
   /**

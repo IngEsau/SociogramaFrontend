@@ -91,3 +91,32 @@ export interface SociogramMetrics {
   aislados: number[];
   rechazados: number[];
 }
+
+// --- Registro de actividades por cuestionario ---
+
+export interface RegistroAlumno {
+  alumno_id: number;
+  matricula: string;
+  nombre: string;
+  estado: 'COMPLETADO' | 'EN_PROGRESO' | 'PENDIENTE';
+  fecha_inicio: string | null;
+  fecha_completado: string | null;
+  tiempo_transcurrido: string | null;
+}
+
+export interface RegistroResumen {
+  total: number;
+  completados: number;
+  en_progreso: number;
+  pendientes: number;
+  porcentaje_completado: number;
+}
+
+export interface RegistroResponse {
+  cuestionario_id: number;
+  cuestionario_titulo: string;
+  grupo_id: number;
+  grupo_clave: string;
+  resumen: RegistroResumen;
+  alumnos: RegistroAlumno[];
+}

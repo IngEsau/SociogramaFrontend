@@ -11,6 +11,7 @@ import DashboardLayout from '../layouts/DashboardLayout/DashboardLayout';
 
 // Feature views por rol
 import {
+  AdminPanelView,
   AdminDashboardView,
   AdminDatabaseImportView,
   AdminImportHubView,
@@ -21,7 +22,7 @@ import {
   AdminCuestionariosView,
   AdminBancoPreguntasView,
 } from '../features/admin';
-import { TutorDashboardView } from '../features/tutor';
+import { TutorDashboardView, TutorPanelView, TutorArchivosView, TutorActivityView } from '../features/tutor';
 import { StudentDashboardView, StudentFormView } from '../features/student';
 
 // COMITÉ: Rol en revisión - puede fusionarse con ADMIN
@@ -99,7 +100,8 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
     children: [
-      { index: true, element: <AdminDashboardView /> },
+      { index: true, element: <AdminPanelView /> },
+      { path: 'panel-legacy', element: <AdminDashboardView /> },
       { path: 'import', element: <AdminImportHubView /> },
       { path: 'import/excel', element: <AdminExcelImportView /> },
       { path: 'import/:type', element: <AdminCsvImportView /> },
@@ -125,7 +127,10 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
     children: [
-      { index: true, element: <TutorDashboardView /> },
+      { index: true, element: <TutorPanelView /> },
+      { path: 'dashboard', element: <TutorDashboardView /> },
+      { path: 'archivos', element: <TutorArchivosView /> },
+      { path: 'activity', element: <TutorActivityView /> },
       // Aquí irán más rutas de tutor:
       // { path: 'assign', element: <AssignSociogram /> },
       // { path: 'reports', element: <ReportsList /> },
@@ -186,7 +191,15 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
   },
-
+  {
+    // Ruta con ID de cuestionario para responder una encuesta concreta
+    path: '/student-form/:cuestionarioId',
+    element: (
+      <RoleProtectedRoute allowedRoles={['ALUMNO', 'DOCENTE', 'ADMIN']}>
+        <StudentFormView />
+      </RoleProtectedRoute>
+    ),
+  },
   // ============================================
   // FALLBACK: 404
   // ============================================

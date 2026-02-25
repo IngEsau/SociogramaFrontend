@@ -2,6 +2,7 @@
  * Vistas del módulo Admin
  */
 export { AdminDashboardView } from './AdminDashboardView';
+export { AdminPanelView } from './AdminPanelView';
 export { AdminDatabaseImportView } from './AdminDatabaseImportView';
 export { AdminImportHubView } from './AdminImportHubView';
 export { AdminExcelImportView } from './AdminExcelImportView';

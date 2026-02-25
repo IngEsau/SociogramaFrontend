@@ -27,10 +27,12 @@ export interface SociogramNodo {
   puntos_negativos: number;
   impacto_total: number;
   tamano: number;
-  puntos_recibidos: number;
+  puntos_recibidos?: number;
   elecciones_recibidas: number;
   elecciones_realizadas: number;
   completo: boolean;
+  fecha_inicio?: string | null;
+  fecha_completado?: string | null;
 }
 
 /** Conexion del sociograma - Respuesta del backend */
@@ -42,8 +44,9 @@ export interface SociogramConexion {
   peso: number;
   tipo_conexion: TipoConexion;
   porcentaje_mutuo?: number;
+  es_mutua?: boolean;
   polaridad?: 'POSITIVA' | 'NEGATIVA';
-  orden_eleccion: number;
+  orden_eleccion?: number;
 }
 
 /** Grupo con estadisticas sociometricas - Respuesta del backend */
@@ -72,11 +75,17 @@ export interface GraphNode {
   id: number;
   label: string;
   matricula?: string;
+  nombre?: string;
   genero?: 'Masculino' | 'Femenino' | 'Otro';
   x?: number;
   y?: number;
   size?: number;
   color?: string;
+  puntosPositivos?: number;
+  puntosNegativos?: number;
+  impactoTotal?: number;
+  eleccionesRealizadas?: number;
+  completo?: boolean;
   metrics?: NodeMetrics;
 }
 

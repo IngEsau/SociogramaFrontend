@@ -1,54 +1,112 @@
 /**
- * Tipos del módulo Student
+ * Tipos del módulo Student (alineados con /api/student/cuestionarios/*)
  */
 
-export interface AssignedSurvey {
+export type CuestionarioEstado = 'PENDIENTE' | 'EN_PROGRESO' | 'COMPLETADO';
+
+export interface StudentQuestionnaire {
   id: number;
   titulo: string;
-  descripcion?: string;
-  fecha_asignacion: string;
-  fecha_limite?: string;
-  estado: 'pendiente' | 'en_progreso' | 'completado' | 'vencido';
-  grupo: {
-    id: number;
-    nombre: string;
-  };
-  preguntas_count: number;
-  progreso?: number; // 0-100
+  periodo: number;
+  periodo_codigo: string;
+  periodo_nombre: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  activo: boolean;
+  esta_activo: boolean;
+  total_preguntas: number;
+  total_respuestas: number;
+  total_grupos: number;
+  creado_en: string;
 }
 
-export interface SurveyQuestion {
+export interface StudentCurrentGroup {
+  id: number;
+  clave: string;
+}
+
+export interface StudentAvailableQuestionnairesResponse {
+  cuestionarios: StudentQuestionnaire[];
+  grupo_actual?: StudentCurrentGroup;
+  message?: string;
+}
+
+export interface StudentQuestionnaireDetailResponse {
+  cuestionario: StudentQuestionnaire & {
+    descripcion?: string | null;
+  };
+}
+
+export interface StudentQuestion {
   id: number;
   texto: string;
-  tipo: 'eleccion' | 'rechazo';
-  categoria?: string;
+  tipo: 'SELECCION_ALUMNO' | 'OPCION' | 'TEXTO';
+  max_elecciones: number;
+  descripcion: string | null;
   orden: number;
-  max_selecciones: number;
-  min_selecciones?: number;
+  ya_respondida: boolean;
 }
 
-export interface Classmate {
+export interface StudentClassmate {
   id: number;
-  nombre_completo: string;
   matricula: string;
-  genero: 'Masculino' | 'Femenino' | 'Otro';
-  foto_url?: string;
+  nombre: string;
 }
 
-export interface SurveyResponse {
+export interface StudentQuestionnaireQuestionsResponse {
+  cuestionario_id: number;
+  cuestionario_titulo: string;
+  grupo_id: number;
+  grupo_clave: string;
+  preguntas: StudentQuestion[];
+  companeros: StudentClassmate[];
+}
+
+export interface StudentSelectedAlumno {
+  alumno_id: number;
+  orden: number;
+}
+
+export interface StudentAnswerPayload {
   pregunta_id: number;
-  seleccionados: number[]; // IDs de compañeros seleccionados
+  seleccionados?: StudentSelectedAlumno[];
+  opcion_id?: number | null;
+  texto_respuesta?: string;
 }
 
-export interface SurveyProgress {
-  survey_id: number;
-  respuestas: SurveyResponse[];
-  ultima_actualizacion: string;
-  completado: boolean;
+export interface StudentSubmitAnswersRequest {
+  respuestas: StudentAnswerPayload[];
 }
 
-export interface SurveySubmitResult {
+export interface StudentSubmitAnswersResponse {
   success: boolean;
-  message: string;
-  fecha_completado?: string;
+  respuestas_guardadas?: number;
+  progreso?: number;
+  message?: string;
+  error?: string;
+  errores?: Array<{
+    pregunta_id: number;
+    error: string;
+  }>;
+}
+
+export interface StudentQuestionnaireProgressResponse {
+  cuestionario_id: number;
+  cuestionario_titulo: string;
+  grupo_id: number;
+  grupo_clave: string;
+  total_preguntas: number;
+  preguntas_respondidas: number;
+  progreso: number;
+  estado: CuestionarioEstado;
+  fecha_inicio: string | null;
+  fecha_completado: string | null;
+}
+
+export interface StudentQuestionnaireWithProgress extends StudentQuestionnaire {
+  estado: CuestionarioEstado;
+  progreso: number;
+  preguntas_respondidas: number;
+  estado_fecha_inicio: string | null;
+  fecha_completado: string | null;
 }

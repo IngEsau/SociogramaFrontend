@@ -9,9 +9,10 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    host: true,
+    host: '0.0.0.0',
     port: 5173,
-    strictPort: false,
+    strictPort: true,
+    allowedHosts: ['heavy-taxes-bake.loca.lt'],
   },
   build: {
     rollupOptions: {
