@@ -28,8 +28,10 @@ import type {
   ActualizarPreguntaBancoRequest,
   ActualizarPreguntaBancoResponse,
   EditarCopiaPreguntaRequest,
-  BancoActionResponse,
   AsociarPreguntaRequest,
+  CrearParPreguntaRequest,
+  CrearParBancoResponse,
+  EliminarPreguntaBancoResponse,
 } from '../types';
 import type { EstadisticasResponse } from '../../sociogram/types';
 
@@ -303,13 +305,25 @@ export const adminService = {
     return response.data.pregunta;
   },
 
-  /** Crear una pregunta en el banco */
+  /** Crear una pregunta en el banco (legacy — individual) */
   async crearBancoPregunta(data: CrearPreguntaBancoRequest): Promise<CrearPreguntaBancoResponse> {
     const response = await api.post<CrearPreguntaBancoResponse>('/admin/preguntas/crear/', data);
     return response.data;
   },
 
-  /** Crear varias preguntas en el banco (bulk) */
+  /** Crear un par de preguntas sociometricas (positiva + negativa) en el banco */
+  async crearParBancoPreguntas(data: CrearParPreguntaRequest): Promise<CrearParBancoResponse> {
+    const response = await api.post<CrearParBancoResponse>('/admin/preguntas/crear/', data);
+    return response.data;
+  },
+
+  /** Crear multiples pares de preguntas sociometricas en el banco */
+  async crearParesBancoPreguntas(data: CrearParPreguntaRequest[]): Promise<CrearParBancoResponse> {
+    const response = await api.post<CrearParBancoResponse>('/admin/preguntas/crear/', data);
+    return response.data;
+  },
+
+  /** Crear varias preguntas en el banco (bulk — legacy) */
   async crearBancoPreguntasBulk(data: CrearPreguntaBancoRequest[]): Promise<CrearPreguntasBulkResponse> {
     const response = await api.post<CrearPreguntasBulkResponse>('/admin/preguntas/crear/', data);
     return response.data;
@@ -327,9 +341,9 @@ export const adminService = {
     return response.data;
   },
 
-  /** Eliminar una pregunta del banco */
-  async eliminarBancoPregunta(id: number): Promise<BancoActionResponse> {
-    const response = await api.delete<BancoActionResponse>(`/admin/preguntas/${id}/eliminar/`);
+  /** Eliminar una pregunta del banco (elimina tambien su par vinculado) */
+  async eliminarBancoPregunta(id: number): Promise<EliminarPreguntaBancoResponse> {
+    const response = await api.delete<EliminarPreguntaBancoResponse>(`/admin/preguntas/${id}/eliminar/`);
     return response.data;
   },
 };

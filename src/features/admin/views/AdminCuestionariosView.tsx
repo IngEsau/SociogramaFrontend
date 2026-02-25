@@ -39,6 +39,7 @@ import {
   Pencil,
   Users,
   X,
+  Info,
 } from 'lucide-react';
 import { useTopbarStore, useToastStore } from '../../../store';
 import { GreenBall, RedBall } from '../../../components/ui';
@@ -356,14 +357,6 @@ export function AdminCuestionariosView() {
     setQuestionBank((prev) => prev.map((q) => q.id === id ? { ...q, selected: !q.selected } : q));
   };
 
-  const handleTogglePolaridad = (id: number) => {
-    setQuestionBank((prev) =>
-      prev.map((q) =>
-        q.id === id ? { ...q, polaridad: q.polaridad === 'POSITIVA' ? 'NEGATIVA' : 'POSITIVA' } : q
-      )
-    );
-  };
-
   /** Agrega pregunta personalizada (inline, no se guarda en el banco del backend) */
   const handleAddCustomQuestion = () => {
     if (newQuestionText.trim().length < 10) {
@@ -604,20 +597,6 @@ export function AdminCuestionariosView() {
     setEditCopyText('');
   };
 
-  /** Cambiar la polaridad de una pregunta — opera sobre la copia local */
-  const handleToggleCopyPolaridad = (preguntaId: number, currentPolaridad: string) => {
-    const newPolaridad = currentPolaridad === 'POSITIVA' ? 'NEGATIVA' : 'POSITIVA';
-    setEditablePreguntas((prev) => {
-      if (!prev) return prev;
-      return prev.map((cp) =>
-        cp.pregunta.id === preguntaId
-          ? { ...cp, pregunta: { ...cp.pregunta, polaridad: newPolaridad as 'POSITIVA' | 'NEGATIVA' } }
-          : cp
-      );
-    });
-    showToast({ message: `Polaridad cambiada a ${newPolaridad.toLowerCase()} (sin guardar)`, type: 'info' });
-  };
-
   /** Drag & drop para reordenar preguntas en el detalle */
   const detailDragItem = useRef<number | null>(null);
   const detailDragOverItem = useRef<number | null>(null);
@@ -702,10 +681,7 @@ export function AdminCuestionariosView() {
       const modifiedCps = edited.filter((cp) => {
         const orig = originalMap.get(cp.pregunta.id);
         if (!orig) return false; // es nueva, no modificada
-        return (
-          orig.pregunta.texto !== cp.pregunta.texto ||
-          orig.pregunta.polaridad !== cp.pregunta.polaridad
-        );
+        return orig.pregunta.texto !== cp.pregunta.texto;
       });
 
       // 3) Detectar preguntas nuevas (están en editablePreguntas pero no en original)
@@ -717,16 +693,10 @@ export function AdminCuestionariosView() {
         await adminService.removerPregunta(selectedCuestionario.id, cp.pregunta.id);
       }
 
-      // Ejecutar modificaciones (texto y/o polaridad)
+      // Ejecutar modificaciones (solo texto, la polaridad no se puede cambiar)
       for (const cp of modifiedCps) {
-        const orig = originalMap.get(cp.pregunta.id)!;
-        const payload: { texto?: string; polaridad?: PreguntaPolaridad } = {};
-        if (orig.pregunta.texto !== cp.pregunta.texto) {
-          payload.texto = cp.pregunta.texto;
-        }
-        if (orig.pregunta.polaridad !== cp.pregunta.polaridad) {
-          payload.polaridad = cp.pregunta.polaridad as PreguntaPolaridad;
-        }
+        const payload: { texto?: string } = {};
+        payload.texto = cp.pregunta.texto;
         await adminService.editarCopiaPregunta(cp.pregunta.id, payload);
       }
 
@@ -912,9 +882,7 @@ export function AdminCuestionariosView() {
                 <p className="text-sm font-semibold text-[#06322B] leading-snug">
                   El circulo <span className="text-[#0F7E3C]">verde</span> indica puntaje POSITIVO y el{' '}
                   <span className="text-[#7A1501]">rojo</span> puntaje NEGATIVO.{' '}
-                  <span className="underline decoration-dotted cursor-default">
-                    Haz clic en el circulo para cambiar la polaridad de la pregunta.
-                  </span>
+                  La polaridad se asigna automaticamente al crear el par y no puede modificarse.
                 </p>
               </div>
 
@@ -1088,15 +1056,14 @@ export function AdminCuestionariosView() {
                           Pregunta {num}.
                         </p>
                         <div className="flex items-start gap-2">
-                          <button
-                            onClick={() => handleTogglePolaridad(q.id)}
-                            className="shrink-0 mt-1 cursor-pointer transition-transform duration-200 hover:scale-125 active:scale-95"
-                            title="Clic para cambiar polaridad"
+                          <div
+                            className="shrink-0 mt-1"
+                            title={`Polaridad: ${isNeg ? 'NEGATIVA' : 'POSITIVA'} (no modificable)`}
                           >
-                            <span className="block transition-all duration-300">
+                            <span className="block">
                               {isNeg ? <RedBall size={20} /> : <GreenBall size={20} />}
                             </span>
-                          </button>
+                          </div>
                           <p className="text-sm sm:text-base font-semibold text-[#245C52] leading-snug">
                             {q.texto}
                           </p>
@@ -1593,7 +1560,6 @@ export function AdminCuestionariosView() {
                       onSaveEdit={() => handleSaveCopyEdit(cp.pregunta.id)}
                       onEditTextChange={setEditCopyText}
                       onDelete={requestDeletePregunta}
-                      onTogglePolaridad={() => handleToggleCopyPolaridad(cp.pregunta.id, cp.pregunta.polaridad || 'POSITIVA')}
                       onDragStart={handleDetailDragStart}
                       onDragEnter={handleDetailDragEnter}
                       onDragEnd={handleDetailDragEnd}
@@ -1712,7 +1678,6 @@ interface DetailQuestionRowProps {
   onSaveEdit: () => void;
   onEditTextChange: (text: string) => void;
   onDelete: (id: number) => void;
-  onTogglePolaridad: () => void;
   onDragStart: (index: number) => void;
   onDragEnter: (index: number) => void;
   onDragEnd: () => void;
@@ -1722,9 +1687,10 @@ function DetailQuestionRow({
   cp, index, isNegative, canDelete, canDrag, canEdit,
   isEditingText, editText, isDragging, isDragTarget,
   onStartEdit, onCancelEdit, onSaveEdit, onEditTextChange,
-  onDelete, onTogglePolaridad, onDragStart, onDragEnter, onDragEnd
+  onDelete, onDragStart, onDragEnter, onDragEnd
 }: DetailQuestionRowProps) {
   const isPos = !isNegative;
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div>
@@ -1776,17 +1742,9 @@ function DetailQuestionRow({
             <span className={`text-xs font-bold tabular-nums ${isPos ? 'text-[#0B9624]' : 'text-[#7A1501]'}`}>
               {String(index + 1).padStart(2, '0')}
             </span>
-            {canEdit ? (
-              <button
-                onClick={onTogglePolaridad}
-                className="transition-transform duration-200 hover:scale-125 active:scale-95"
-                title={`Polaridad: ${isPos ? 'POSITIVA' : 'NEGATIVA'}. Clic para cambiar`}
-              >
-                {isPos ? <GreenBall size={20} /> : <RedBall size={20} />}
-              </button>
-            ) : (
-              isPos ? <GreenBall size={20} /> : <RedBall size={20} />
-            )}
+            <div title={`Polaridad: ${isPos ? 'POSITIVA' : 'NEGATIVA'} (no modificable)`}>
+              {isPos ? <GreenBall size={20} /> : <RedBall size={20} />}
+            </div>
           </div>
 
           {/* Texto o campo de edicion */}
@@ -1821,16 +1779,27 @@ function DetailQuestionRow({
                 </div>
               </div>
             ) : (
-              <>
+              <div
+                className="relative"
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+              >
                 <p className="text-sm font-medium text-gray-800 leading-snug wrap-break-word">
                   {cp.pregunta.texto}
                 </p>
                 {cp.pregunta.descripcion && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {cp.pregunta.descripcion} | Max. elecciones: {cp.pregunta.max_elecciones}
-                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Info size={11} className="text-gray-400" />
+                    <span className="text-[10px] text-gray-400 cursor-default">Hover para descripcion</span>
+                  </div>
                 )}
-              </>
+                {isHovered && cp.pregunta.descripcion && (
+                  <div className="absolute left-0 top-full mt-1 z-40 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-sm pointer-events-none">
+                    <p className="font-medium mb-0.5 text-gray-300">Descripcion:</p>
+                    <p className="leading-relaxed">{cp.pregunta.descripcion}</p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

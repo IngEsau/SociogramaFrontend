@@ -42,8 +42,14 @@ function processQueue(error: unknown, token: string | null) {
 
 /**
  * Limpia toda la sesión del usuario y redirige al login.
+ * Usa un flag para evitar que se ejecute múltiples veces en cascada.
  */
+let isRedirecting = false;
+
 function clearSessionAndRedirect() {
+  if (isRedirecting) return;
+  isRedirecting = true;
+
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
@@ -73,15 +79,17 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // Solo manejar errores 401 que no sean del propio endpoint de refresh o login
+    // Solo manejar errores 401 que no sean del propio endpoint de refresh, login o logout
     const isRefreshRequest = originalRequest.url?.includes('/auth/token/refresh/');
     const isLoginRequest = originalRequest.url?.includes('/auth/login/');
+    const isLogoutRequest = originalRequest.url?.includes('/auth/logout/');
 
     if (
       error.response?.status !== 401 ||
       originalRequest._retry ||
       isRefreshRequest ||
-      isLoginRequest
+      isLoginRequest ||
+      isLogoutRequest
     ) {
       return Promise.reject(error);
     }

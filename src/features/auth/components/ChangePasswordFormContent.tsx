@@ -67,7 +67,6 @@ export const ChangePasswordFormContent = ({
           <div className={`w-full p-3 bg-amber-50 border border-amber-300 rounded-lg
             ${isMobile ? 'text-xs' : 'text-sm'}`}>
             <p className="text-amber-800 font-['Roboto'] font-medium flex items-center gap-2">
-              <span className="text-lg">⚠️</span>
               Por seguridad, debes cambiar tu contraseña temporal antes de continuar.
             </p>
           </div>
