@@ -6,6 +6,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GraphEdge, GraphNode, SociogramConfig, SociogramData } from '../types';
 import { normalizeGraphData } from '../utils';
+import openEyeIcon from '../../../core/assets/open-eye-icon.svg';
+import closeEyeIcon from '../../../core/assets/close-eye-icon.svg';
+import visibilityIcon from '../../../core/assets/visibility-icon.svg';
+import noVisibilityIcon from '../../../core/assets/no-visibility-icon.svg';
+import personRoundedIcon from '../../../core/assets/person-rounded-icon.svg';
 
 interface SociogramGraphProps {
   data: SociogramData | null;
@@ -15,6 +20,10 @@ interface SociogramGraphProps {
   className?: string;
   isLoading?: boolean;
   error?: string | null;
+  isBlurred?: boolean;
+  onToggleBlur?: () => void;
+  showNodeNames?: boolean;
+  onToggleNodeNames?: () => void;
 }
 
 interface SimulationNode {
@@ -49,6 +58,19 @@ function gradientByNode(node: GraphNode): 'accepted' | 'rejected' | 'neutral' {
   return 'accepted';
 }
 
+/**
+ * Calcula la "relevancia posicional" de un nodo para el layout.
+ * Mayor puntaje positivo neto = mas cerca del centro.
+ * Se basa en: puntos_positivos - puntos_negativos, normalizado por impactoTotal.
+ */
+function calcRelevancia(node: GraphNode): number {
+  const pos = node.puntosPositivos ?? 0;
+  const neg = node.puntosNegativos ?? 0;
+  const impacto = node.impactoTotal ?? node.size ?? 0;
+  // Puntaje positivo neto ponderado por el impacto total
+  return Math.max(0, (pos - neg) * 0.6 + impacto * 0.4);
+}
+
 function buildSimulation(
   nodes: GraphNode[],
   edges: GraphEdge[],
@@ -58,34 +80,42 @@ function buildSimulation(
   const centerX = width / 2;
   const centerY = height / 2;
 
+  // Ordenar por relevancia: los mas relevantes (mayor puntaje positivo neto) van al centro
   const seeded = [...nodes]
-    .map((node, index) => ({
+    .map((node) => ({
       id: node.id,
       radius: clamp(node.size ?? 26, 14, 86),
-      index,
+      relevancia: calcRelevancia(node),
     }))
-    .sort((a, b) => b.radius - a.radius);
+    .sort((a, b) => b.relevancia - a.relevancia);
 
+  const maxRelevancia = seeded[0]?.relevancia ?? 1;
+
+  // Distribucion radial: radio proporcional a la inversa de la relevancia
+  // El nodo mas relevante en el centro, los demas en anillos segun su relevancia relativa
   const states: SimulationNode[] = seeded.map((node, index) => {
     if (index === 0) {
-      return {
-        id: node.id,
-        x: centerX,
-        y: centerY,
-        vx: 0,
-        vy: 0,
-        radius: node.radius,
-      };
+      return { id: node.id, x: centerX, y: centerY, vx: 0, vy: 0, radius: node.radius };
     }
 
-    const ring = 150 + Math.floor((index - 1) / 8) * 95;
-    const angle = ((index - 1) / Math.max(1, seeded.length - 1)) * Math.PI * 2;
-    const wobble = ((index % 3) - 1) * 12;
+    // Radio proporcional: nodos con alta relevancia cerca del centro
+    const relRatio = maxRelevancia > 0 ? 1 - node.relevancia / maxRelevancia : 1;
+    // Anillo minimo para evitar solapamiento con el centro, maximo hasta el borde
+    const minRing = node.radius * 2 + 50;
+    const maxRing = Math.min(width, height) * 0.44;
+    const ring = minRing + relRatio * (maxRing - minRing);
+
+    // Distribuir angulos de forma uniforme con un desfase para evitar alineaciones
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5 grados
+    const angle = index * goldenAngle;
+
+    // Perturbacion organica para evitar aspecto de rejilla
+    const wobble = (((index * 7) % 5) - 2) * 8;
 
     return {
       id: node.id,
       x: centerX + Math.cos(angle) * (ring + wobble),
-      y: centerY + Math.sin(angle) * (ring - wobble),
+      y: centerY + Math.sin(angle) * (ring - wobble * 0.5),
       vx: 0,
       vy: 0,
       radius: node.radius,
@@ -95,13 +125,20 @@ function buildSimulation(
   const stateById = new Map<number, SimulationNode>();
   states.forEach((node) => stateById.set(node.id, node));
 
-  const repulsionFactor = 8000;
-  const springFactor = 0.02;
-  const centerForce = 0.0023;
-  const damping = 0.87;
-  const maxStep = 9.5;
+  // Mapa de relevancia para modular la fuerza central
+  const relevanciaById = new Map<number, number>();
+  seeded.forEach((n) => relevanciaById.set(n.id, n.relevancia));
 
-  for (let iteration = 0; iteration < 260; iteration += 1) {
+  const repulsionFactor = 9500;
+  const springFactor = 0.025;
+  // Fuerza central variable: los nodos mas relevantes son mas atraidos al centro
+  const centerForceBase = 0.003;
+  const centerForceScale = 0.008;
+  const damping = 0.85;
+  const maxStep = 10;
+
+  for (let iteration = 0; iteration < 320; iteration += 1) {
+    // Repulsion entre pares de nodos
     for (let i = 0; i < states.length; i += 1) {
       const a = states[i];
       for (let j = i + 1; j < states.length; j += 1) {
@@ -110,7 +147,7 @@ function buildSimulation(
         const dy = b.y - a.y;
         const distSq = dx * dx + dy * dy + 0.1;
         const dist = Math.sqrt(distSq);
-        const minDist = a.radius + b.radius + 30;
+        const minDist = a.radius + b.radius + 28;
         const force = (repulsionFactor * minDist * minDist) / distSq;
         const fx = (dx / dist) * force;
         const fy = (dy / dist) * force;
@@ -122,6 +159,7 @@ function buildSimulation(
       }
     }
 
+    // Fuerzas de resorte por aristas (mantiene nodos conectados cerca)
     edges.forEach((edge) => {
       const source = stateById.get(edge.source);
       const target = stateById.get(edge.target);
@@ -130,7 +168,8 @@ function buildSimulation(
       const dx = target.x - source.x;
       const dy = target.y - source.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      const idealDistance = source.radius + target.radius + (edge.reciproco ? 26 : 52);
+      // Aristas reciprocas (conexion fuerte) atraen mas
+      const idealDistance = source.radius + target.radius + (edge.reciproco ? 20 : 48);
       const stretch = dist - idealDistance;
       const force = stretch * springFactor;
       const fx = (dx / dist) * force;
@@ -142,9 +181,14 @@ function buildSimulation(
       target.vy -= fy;
     });
 
+    // Fuerza hacia el centro: proporcional a la relevancia del nodo
     states.forEach((node) => {
-      node.vx += (centerX - node.x) * centerForce;
-      node.vy += (centerY - node.y) * centerForce;
+      const rel = relevanciaById.get(node.id) ?? 0;
+      const relRatio = maxRelevancia > 0 ? rel / maxRelevancia : 0;
+      const cf = centerForceBase + relRatio * centerForceScale;
+
+      node.vx += (centerX - node.x) * cf;
+      node.vy += (centerY - node.y) * cf;
 
       node.vx *= damping;
       node.vy *= damping;
@@ -176,20 +220,25 @@ function getEdgePath(
   const ux = dx / dist;
   const uy = dy / dist;
 
-  const startX = source.x + ux * (source.radius - 1);
-  const startY = source.y + uy * (source.radius - 1);
-  const endX = target.x - ux * (target.radius + 5);
-  const endY = target.y - uy * (target.radius + 5);
+  // Para aristas reciprocas dejamos espacio para la punta de inicio tambien
+  const startOffset = reciprocal ? source.radius + 6 : source.radius - 1;
+  const endOffset = target.radius + 6;
+
+  const startX = source.x + ux * startOffset;
+  const startY = source.y + uy * startOffset;
+  const endX = target.x - ux * endOffset;
+  const endY = target.y - uy * endOffset;
 
   if (!reciprocal) {
     return `M ${roundTo1(startX)} ${roundTo1(startY)} L ${roundTo1(endX)} ${roundTo1(endY)}`;
   }
 
+  // Curva cuadratica para aristas reciprocas (conexion fuerte)
   const midX = (startX + endX) / 2;
   const midY = (startY + endY) / 2;
   const perpX = -uy;
   const perpY = ux;
-  const curveMagnitude = source.id < target.id ? 20 : -20;
+  const curveMagnitude = 26;
   const controlX = midX + perpX * curveMagnitude;
   const controlY = midY + perpY * curveMagnitude;
 
@@ -203,6 +252,10 @@ export function SociogramGraph({
   className = '',
   isLoading = false,
   error = null,
+  isBlurred = false,
+  onToggleBlur,
+  showNodeNames = false,
+  onToggleNodeNames,
 }: SociogramGraphProps) {
   const [zoom, setZoom] = useState(1);
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
@@ -237,30 +290,24 @@ export function SociogramGraph({
 
   if (isLoading) {
     return (
-      <div className={`rounded-xl border border-emerald-600/35 bg-white p-6 ${className}`}>
-        <div className="flex min-h-[420px] items-center justify-center">
-          <p className="text-sm text-gray-500">Cargando sociograma...</p>
-        </div>
+      <div className={`rounded-xl border border-emerald-600/35 bg-white p-6 flex items-center justify-center ${className}`}>
+        <p className="text-sm text-gray-500">Cargando sociograma...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className={`rounded-xl border border-emerald-600/35 bg-white p-6 ${className}`}>
-        <div className="flex min-h-[420px] items-center justify-center">
-          <p className="max-w-md text-center text-sm text-red-700">{error}</p>
-        </div>
+      <div className={`rounded-xl border border-emerald-600/35 bg-white p-6 flex items-center justify-center ${className}`}>
+        <p className="max-w-md text-center text-sm text-red-700">{error}</p>
       </div>
     );
   }
 
   if (!normalizedData || normalizedData.nodes.length === 0 || !simulation) {
     return (
-      <div className={`rounded-xl border border-emerald-600/35 bg-white p-6 ${className}`}>
-        <div className="flex min-h-[420px] items-center justify-center">
-          <p className="text-sm text-gray-500">No hay datos del sociograma para mostrar.</p>
-        </div>
+      <div className={`rounded-xl border border-emerald-600/35 bg-white p-6 flex items-center justify-center ${className}`}>
+        <p className="text-sm text-gray-500">No hay datos del sociograma para mostrar.</p>
       </div>
     );
   }
@@ -271,9 +318,17 @@ export function SociogramGraph({
 
   return (
     <div className={`relative rounded-xl border border-emerald-600/35 bg-[#f4f5f6] ${className}`}>
+      {/* Overlay de blur cuando isBlurred */}
+      {isBlurred && (
+        <div
+          className="absolute inset-0 z-20 rounded-xl"
+          style={{ backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' }}
+        />
+      )}
+
       <svg
         viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
-        className="h-full min-h-[420px] w-full rounded-xl"
+        className="h-full min-h-105 w-full rounded-xl"
         role="img"
         aria-label="Grafo del sociograma"
       >
@@ -294,10 +349,16 @@ export function SociogramGraph({
             <stop offset="100%" stopColor="#2E3136" />
           </radialGradient>
 
-          <marker id="arrow-regular" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
+          {/* Punta de flecha fin — conexiones normales */}
+          <marker id="arrow-end" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#21242A" />
           </marker>
-          <marker id="arrow-negative" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
+          {/* Punta de flecha inicio — conexiones fuertes (reciprocas) */}
+          <marker id="arrow-start" markerWidth="10" markerHeight="7" refX="2" refY="3.5" orient="auto-start-reverse">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#21242A" />
+          </marker>
+          {/* Punta de flecha fin — rechazos */}
+          <marker id="arrow-end-neg" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#5A0D0D" />
           </marker>
         </defs>
@@ -309,8 +370,18 @@ export function SociogramGraph({
             if (!source || !target) return null;
 
             const path = getEdgePath(source, target, Boolean(edge.reciproco));
-            const edgeColor = edge.type === 'rechazo' ? '#5A0D0D' : '#21242A';
-            const strokeWidth = clamp(1 + (edge.weight ?? 1) * 0.14, 1.1, 3.2);
+            const isRechazo = edge.type === 'rechazo';
+            const isReciproca = Boolean(edge.reciproco);
+
+            // Conexion fuerte (reciproca): linea continua mas gruesa, doble punta
+            // Conexion debil (una direccion): linea mas fina, una punta
+            const edgeColor = isRechazo ? '#5A0D0D' : '#21242A';
+            const strokeWidth = isReciproca
+              ? clamp(1.8 + (edge.weight ?? 1) * 0.18, 2, 4)
+              : clamp(1 + (edge.weight ?? 1) * 0.12, 1, 2.5);
+
+            const markerEnd = isRechazo ? 'url(#arrow-end-neg)' : 'url(#arrow-end)';
+            const markerStart = isReciproca ? 'url(#arrow-start)' : undefined;
 
             return (
               <path
@@ -319,8 +390,9 @@ export function SociogramGraph({
                 stroke={edgeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
-                markerEnd={edge.type === 'rechazo' ? 'url(#arrow-negative)' : 'url(#arrow-regular)'}
-                opacity={0.95}
+                markerEnd={markerEnd}
+                markerStart={markerStart}
+                opacity={isReciproca ? 1 : 0.85}
               />
             );
           })}
@@ -385,32 +457,153 @@ export function SociogramGraph({
                 >
                   {node.label}
                 </text>
+                {/* El nombre se muestra en el tooltip al hacer hover, no bajo la bolita */}
               </g>
             );
           })}
         </g>
 
         {hoveredNode && (
-          <g
-            transform={`translate(${clamp(((hoveredNode.simNode.x - centerX) * zoom) + centerX + 14, 10, VIEWBOX_WIDTH - 220)} ${clamp(((hoveredNode.simNode.y - centerY) * zoom) + centerY - 24, 16, VIEWBOX_HEIGHT - 90)})`}
-            pointerEvents="none"
-          >
-            <rect width="206" height="66" rx="8" fill="#FFFFFF" stroke="#CBD5E1" />
-            <text x="10" y="20" fontSize="12" fill="#0F172A" fontWeight={600}>
-              {hoveredNode.node.matricula ? `${hoveredNode.node.matricula} · ` : ''}
-              {hoveredNode.node.label}
-            </text>
-            <text x="10" y="38" fontSize="11" fill="#0A5B50">
-              + {hoveredNode.node.puntosPositivos ?? 0} pts
-            </text>
-            <text x="10" y="54" fontSize="11" fill="#7A1501">
-              - {hoveredNode.node.puntosNegativos ?? 0} pts
-            </text>
-          </g>
+          (() => {
+            const positivos = hoveredNode.node.puntosPositivos ?? 0;
+            const negativos = hoveredNode.node.puntosNegativos ?? 0;
+            const nombre = hoveredNode.node.nombre ?? '';
+            const nombreDisplay = nombre.length > 28 ? nombre.slice(0, 26) + '…' : nombre;
+
+            // Dimensiones del tooltip: con nombre es mas alto
+            const tooltipW = showNodeNames ? 230 : 160;
+            const tooltipH = showNodeNames ? 92 : 66;
+            const rowH = 18; // altura de cada fila de pts
+            const pad = 12;  // padding interno
+
+            const rawX = ((hoveredNode.simNode.x - centerX) * zoom) + centerX + hoveredNode.simNode.radius * zoom + 12;
+            const rawY = ((hoveredNode.simNode.y - centerY) * zoom) + centerY - tooltipH / 2;
+            const tx = clamp(rawX, 8, VIEWBOX_WIDTH - tooltipW - 8);
+            const ty = clamp(rawY, 8, VIEWBOX_HEIGHT - tooltipH - 8);
+
+            // Posicion Y de la fila de puntos segun si hay nombre
+            const ptsStartY = showNodeNames ? 52 : pad + 8;
+
+            return (
+              <g transform={`translate(${tx} ${ty})`} pointerEvents="none">
+                {/* Sombra */}
+                <rect x="2" y="3" width={tooltipW} height={tooltipH} rx="8" fill="rgba(0,0,0,0.18)" />
+                {/* Fondo con borde verde */}
+                <rect
+                  width={tooltipW} height={tooltipH} rx="8"
+                  fill="#FFFFFF"
+                  stroke="rgba(15,126,60,0.50)"
+                  strokeWidth={1}
+                />
+
+                {/* --- Fila superior: icono persona + nombre (solo si showNodeNames) --- */}
+                {showNodeNames && (
+                  <>
+                    <image
+                      href={personRoundedIcon}
+                      x={pad}
+                      y={pad}
+                      width={15}
+                      height={15}
+                    />
+                    <text
+                      x={pad + 19}
+                      y={pad + 12}
+                      fontSize="12.5"
+                      fontFamily="Lato, sans-serif"
+                      fontWeight={700}
+                      fill="#2E2E2E"
+                      style={{ userSelect: 'none' }}
+                    >
+                      {nombreDisplay}
+                    </text>
+                    {/* Separador */}
+                    <line
+                      x1={pad} y1={ptsStartY - 8}
+                      x2={tooltipW - pad} y2={ptsStartY - 8}
+                      stroke="#D1FAE5" strokeWidth={1}
+                    />
+                  </>
+                )}
+
+                {/* --- Fila pts positivos --- */}
+                <rect
+                  x={pad} y={ptsStartY}
+                  width={15} height={15} rx="3"
+                  fill="#0B9624"
+                />
+                <text
+                  x={pad + 20}
+                  y={ptsStartY + 12}
+                  fontSize="12.5"
+                  fontFamily="Lato, sans-serif"
+                  fontWeight={700}
+                  fill="#000000"
+                  style={{ userSelect: 'none' }}
+                >
+                  {positivos} pts
+                </text>
+
+                {/* --- Fila pts negativos --- */}
+                <rect
+                  x={pad} y={ptsStartY + rowH + 2}
+                  width={15} height={15} rx="3"
+                  fill="#7A1501"
+                />
+                <text
+                  x={pad + 20}
+                  y={ptsStartY + rowH + 2 + 12}
+                  fontSize="12.5"
+                  fontFamily="Lato, sans-serif"
+                  fontWeight={700}
+                  fill="#000000"
+                  style={{ userSelect: 'none' }}
+                >
+                  {negativos} pts
+                </text>
+              </g>
+            );
+          })()
         )}
       </svg>
 
-      <div className="absolute bottom-3 right-3 flex flex-col gap-1.5">
+      <div className="absolute bottom-3 right-3 z-30 flex flex-col gap-1.5">
+        {/* Boton ojo: muestra/oculta el grafo completo con blur */}
+        {onToggleBlur && (
+          <button
+            type="button"
+            className="h-8 w-8 rounded-md border bg-white border-gray-200 shadow flex items-center justify-center transition-colors hover:border-emerald-600/50"
+            onClick={onToggleBlur}
+            aria-label={isBlurred ? 'Mostrar sociograma' : 'Ocultar sociograma'}
+            title={isBlurred ? 'Mostrar sociograma' : 'Ocultar sociograma'}
+          >
+            <img
+              src={isBlurred ? closeEyeIcon : openEyeIcon}
+              alt=""
+              width={16}
+              height={16}
+              aria-hidden
+            />
+          </button>
+        )}
+        {/* Boton persona: muestra/oculta nombres en el tooltip hover */}
+        {onToggleNodeNames && (
+          <button
+            type="button"
+            className="h-8 w-8 rounded-md border bg-white border-gray-200 shadow flex items-center justify-center transition-colors hover:border-emerald-600/50"
+            onClick={onToggleNodeNames}
+            aria-label={showNodeNames ? 'Ocultar nombres' : 'Mostrar nombres'}
+            title={showNodeNames ? 'Ocultar nombres' : 'Mostrar nombres'}
+          >
+            <img
+              src={showNodeNames ? visibilityIcon : noVisibilityIcon}
+              alt=""
+              width={16}
+              height={16}
+              aria-hidden
+            />
+          </button>
+        )}
         <button
           type="button"
           className="h-8 w-8 rounded-md bg-[#0F9B46] text-lg font-semibold leading-none text-white shadow hover:bg-[#0D873E]"

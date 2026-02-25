@@ -22,7 +22,7 @@ import {
   AdminCuestionariosView,
   AdminBancoPreguntasView,
 } from '../features/admin';
-import { TutorDashboardView } from '../features/tutor';
+import { TutorDashboardView, TutorPanelView, TutorArchivosView, TutorActivityView } from '../features/tutor';
 import { StudentDashboardView, StudentFormView } from '../features/student';
 
 // COMITÉ: Rol en revisión - puede fusionarse con ADMIN
@@ -127,7 +127,10 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
     children: [
-      { index: true, element: <TutorDashboardView /> },
+      { index: true, element: <TutorPanelView /> },
+      { path: 'dashboard', element: <TutorDashboardView /> },
+      { path: 'archivos', element: <TutorArchivosView /> },
+      { path: 'activity', element: <TutorActivityView /> },
       // Aquí irán más rutas de tutor:
       // { path: 'assign', element: <AssignSociogram /> },
       // { path: 'reports', element: <ReportsList /> },

@@ -145,24 +145,22 @@ export function calculateMetrics(data: SociogramData): GlobalMetrics {
 export function normalizeGraphData(data: SociogramData): SociogramData {
   const { nodes, edges, metadata } = data;
   
-  // Agregar métricas a cada nodo
+  // Agregar métricas a cada nodo si no las tiene
   const nodesWithMetrics = nodes.map((node) => ({
     ...node,
     metrics: node.metrics || calculateNodeMetrics(node.id, edges, nodes.length),
   }));
 
-  // Marcar edges recíprocos
-  const edgesWithReciprocity = edges.map((edge) => ({
+  // Las aristas ya vienen con reciprocidad calculada desde el adaptador.
+  // Solo aseguramos que tengan id.
+  const edgesNormalized = edges.map((edge) => ({
     ...edge,
     id: edge.id || `${edge.source}-${edge.target}-${edge.type}`,
-    reciproco: edges.some(
-      (e) => e.source === edge.target && e.target === edge.source && e.type === edge.type
-    ),
   }));
 
   return {
     nodes: nodesWithMetrics,
-    edges: edgesWithReciprocity,
+    edges: edgesNormalized,
     metadata,
   };
 }

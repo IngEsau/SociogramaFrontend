@@ -6,13 +6,24 @@ import type {
   GraphEdge,
   GraphNode,
   NodeMetrics,
+  SociogramConexion,
   SociogramData,
   SociogramGrupoEstadisticas,
   SociogramMetadata,
+  SociogramNodo,
 } from '../types';
 
 const MIN_NODE_SIZE = 18;
 const MAX_NODE_SIZE = 82;
+
+// Maximas flechas de salida por alumno (relaciones cercanas)
+const MAX_OUTGOING_EDGES = 3;
+
+// Umbral minimo de peso para que una conexion sea significativa (33% del total positivo del origen)
+const MIN_WEIGHT_RATIO = 0.33;
+
+// Porcentaje del impacto maximo por debajo del cual un nodo se considera neutro/invisible
+const NEUTRAL_THRESHOLD_RATIO = 0.05;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -28,10 +39,24 @@ function statusFromTipo(tipo: 'ACEPTADO' | 'RECHAZADO' | 'INVISIBLE'): NodeMetri
   return 'popular';
 }
 
-function colorFromTipo(tipo: 'ACEPTADO' | 'RECHAZADO' | 'INVISIBLE'): string {
-  if (tipo === 'RECHAZADO') return '#7A1501';
-  if (tipo === 'INVISIBLE') return '#4B5563';
-  return '#0F7E3C';
+/**
+ * Determina el color del nodo segun la relacion entre puntos positivos y negativos.
+ *
+ * - Verde: puntos_positivos >= puntos_negativos
+ * - Rojo:  puntos_negativos > puntos_positivos
+ * - Gris:  impacto_total <= 5% del maximo impacto del grupo (neutro/invisible)
+ */
+function colorFromPuntaje(
+  nodo: SociogramNodo,
+  maxImpactoGrupo: number
+): string {
+  const impacto = nodo.impacto_total ?? 0;
+  const umbralNeutro = maxImpactoGrupo * NEUTRAL_THRESHOLD_RATIO;
+
+  if (impacto <= umbralNeutro) return '#4B5563'; // neutro/invisible
+
+  if (nodo.puntos_negativos > nodo.puntos_positivos) return '#7A1501'; // rechazado
+  return '#0F7E3C'; // aceptado
 }
 
 function buildNodeMetrics(
@@ -66,6 +91,127 @@ function normalizeNodeSize(impacto: number, maxImpacto: number): number {
   );
 }
 
+/**
+ * Filtra y construye las aristas del grafo aplicando las reglas del sociograma:
+ *
+ * 1. Cada alumno tiene maximo MAX_OUTGOING_EDGES flechas de salida (elecciones positivas).
+ *    Se toman las de mayor peso siempre que el peso >= 33% de la suma total positiva del origen.
+ * 2. Las conexiones negativas (rechazos) tambien se limitan a MAX_OUTGOING_EDGES de salida.
+ * 3. Si A -> B y B -> A en positivo, se consolida en una unica arista reciproca (doble punta = conexion fuerte).
+ *    Si solo uno apunta al otro, es conexion debil (una punta).
+ */
+function filterAndBuildGraphEdges(conexiones: SociogramConexion[]): GraphEdge[] {
+  // Separar positivas y negativas
+  const positivas = conexiones.filter((c) => c.polaridad === 'POSITIVA');
+  const negativas = conexiones.filter((c) => c.polaridad === 'NEGATIVA');
+
+  // --- Procesar conexiones positivas ---
+
+  // Calcular peso total positivo por origen
+  const totalPositivoPorOrigen = new Map<number, number>();
+  positivas.forEach((c) => {
+    totalPositivoPorOrigen.set(
+      c.origen_id,
+      (totalPositivoPorOrigen.get(c.origen_id) ?? 0) + c.peso
+    );
+  });
+
+  // Para cada origen, tomar top MAX_OUTGOING_EDGES con peso >= 33% del total
+  const edgesPositivosSeleccionados = new Map<string, SociogramConexion>();
+
+  const origenesPositivos = new Set(positivas.map((c) => c.origen_id));
+  origenesPositivos.forEach((origenId) => {
+    const totalPeso = totalPositivoPorOrigen.get(origenId) ?? 0;
+    const umbral = totalPeso * MIN_WEIGHT_RATIO;
+
+    const candidatos = positivas
+      .filter((c) => c.origen_id === origenId && c.peso >= umbral)
+      .sort((a, b) => b.peso - a.peso)
+      .slice(0, MAX_OUTGOING_EDGES);
+
+    candidatos.forEach((c) => {
+      const key = `${c.origen_id}-${c.destino_id}`;
+      edgesPositivosSeleccionados.set(key, c);
+    });
+  });
+
+  // Determinar reciprocidad: A->B es reciproca si tambien B->A esta seleccionada
+  const edgesPositivosFinales: GraphEdge[] = [];
+  const procesados = new Set<string>();
+
+  edgesPositivosSeleccionados.forEach((conexion, key) => {
+    if (procesados.has(key)) return;
+
+    const reverseKey = `${conexion.destino_id}-${conexion.origen_id}`;
+    const esReciproca = edgesPositivosSeleccionados.has(reverseKey);
+
+    if (esReciproca) {
+      // Consolidar en una sola arista bidireccional (conexion fuerte)
+      const pesoPromedio =
+        ((conexion.peso + (edgesPositivosSeleccionados.get(reverseKey)?.peso ?? conexion.peso)) / 2);
+
+      edgesPositivosFinales.push({
+        id: `${Math.min(conexion.origen_id, conexion.destino_id)}-${Math.max(conexion.origen_id, conexion.destino_id)}-pos-mutual`,
+        source: conexion.origen_id,
+        target: conexion.destino_id,
+        type: 'eleccion',
+        reciproco: true,
+        weight: pesoPromedio,
+      });
+
+      procesados.add(key);
+      procesados.add(reverseKey);
+    } else {
+      // Conexion debil: solo una direccion
+      edgesPositivosFinales.push({
+        id: `${conexion.origen_id}-${conexion.destino_id}-pos`,
+        source: conexion.origen_id,
+        target: conexion.destino_id,
+        type: 'eleccion',
+        reciproco: false,
+        weight: conexion.peso,
+      });
+
+      procesados.add(key);
+    }
+  });
+
+  // --- Procesar conexiones negativas (rechazos) ---
+  // Tambien se limitan: top MAX_OUTGOING_EDGES por origen segun peso
+  const totalNegativoPorOrigen = new Map<number, number>();
+  negativas.forEach((c) => {
+    totalNegativoPorOrigen.set(
+      c.origen_id,
+      (totalNegativoPorOrigen.get(c.origen_id) ?? 0) + c.peso
+    );
+  });
+
+  const edgesNegativos: GraphEdge[] = [];
+  const origenesNegativos = new Set(negativas.map((c) => c.origen_id));
+
+  origenesNegativos.forEach((origenId) => {
+    const totalPeso = totalNegativoPorOrigen.get(origenId) ?? 0;
+    const umbral = totalPeso * MIN_WEIGHT_RATIO;
+
+    negativas
+      .filter((c) => c.origen_id === origenId && c.peso >= umbral)
+      .sort((a, b) => b.peso - a.peso)
+      .slice(0, MAX_OUTGOING_EDGES)
+      .forEach((c) => {
+        edgesNegativos.push({
+          id: `${c.origen_id}-${c.destino_id}-neg`,
+          source: c.origen_id,
+          target: c.destino_id,
+          type: 'rechazo',
+          reciproco: false,
+          weight: c.peso,
+        });
+      });
+  });
+
+  return [...edgesPositivosFinales, ...edgesNegativos];
+}
+
 export function mapGrupoEstadisticasToSociogramData(
   grupo: SociogramGrupoEstadisticas,
   metadataOverrides?: Partial<SociogramMetadata>
@@ -78,7 +224,7 @@ export function mapGrupoEstadisticasToSociogramData(
     matricula: nodo.matricula,
     nombre: nodo.nombre,
     size: normalizeNodeSize(nodo.impacto_total, maxImpacto),
-    color: colorFromTipo(nodo.tipo),
+    color: colorFromPuntaje(nodo, maxImpacto),
     puntosPositivos: nodo.puntos_positivos,
     puntosNegativos: nodo.puntos_negativos,
     impactoTotal: nodo.impacto_total,
@@ -93,13 +239,7 @@ export function mapGrupoEstadisticasToSociogramData(
     ),
   }));
 
-  const edges: GraphEdge[] = grupo.conexiones.map((conexion, index) => ({
-    id: `${conexion.origen_id}-${conexion.destino_id}-${index}`,
-    source: conexion.origen_id,
-    target: conexion.destino_id,
-    type: conexion.polaridad === 'NEGATIVA' ? 'rechazo' : 'eleccion',
-    weight: conexion.peso,
-  }));
+  const edges: GraphEdge[] = filterAndBuildGraphEdges(grupo.conexiones);
 
   const metadata: SociogramMetadata = {
     id: metadataOverrides?.id ?? grupo.grupo_id,

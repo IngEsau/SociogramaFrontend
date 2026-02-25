@@ -181,6 +181,12 @@ export interface PreguntaBanco {
   es_sociometrica?: boolean;
   opciones?: unknown[];
   creado_en?: string;
+  /** ID de la pregunta par vinculada (enlace mutuo positiva-negativa) */
+  par_pregunta_id?: number | null;
+  /** Texto de la pregunta par vinculada */
+  par_pregunta_texto?: string | null;
+  /** Polaridad de la pregunta par vinculada */
+  par_pregunta_polaridad?: PreguntaPolaridad | null;
 }
 
 /** Respuesta de GET /api/admin/preguntas/ */
@@ -189,7 +195,7 @@ export interface ListarBancoResponse {
   preguntas: PreguntaBanco[];
 }
 
-/** Body para POST /api/admin/preguntas/crear/ (individual) */
+/** Body para POST /api/admin/preguntas/crear/ — par de preguntas sociometricas */
 export interface CrearPreguntaBancoRequest {
   texto: string;
   tipo: 'SELECCION_ALUMNO';
@@ -199,7 +205,49 @@ export interface CrearPreguntaBancoRequest {
   descripcion?: string;
 }
 
-/** Respuesta de POST /api/admin/preguntas/crear/ (individual) */
+/** Estructura de par para crear preguntas en el banco */
+export interface CrearParPreguntaRequest {
+  positiva: {
+    texto: string;
+    tipo: 'SELECCION_ALUMNO';
+    max_elecciones: number;
+    orden?: number;
+    descripcion?: string;
+  };
+  negativa: {
+    texto: string;
+    tipo: 'SELECCION_ALUMNO';
+    max_elecciones: number;
+    orden?: number;
+    descripcion?: string;
+  };
+}
+
+/** Pregunta dentro de un par en la respuesta de creacion */
+export interface PreguntaParResponse {
+  id: number;
+  texto: string;
+  tipo: 'SELECCION_ALUMNO';
+  polaridad: PreguntaPolaridad;
+  max_elecciones: number;
+  orden: number;
+  activa: boolean;
+  descripcion: string;
+  par_pregunta_id: number;
+}
+
+/** Respuesta de POST /api/admin/preguntas/crear/ (par individual) */
+export interface CrearParBancoResponse {
+  success: boolean;
+  total_pares_creados: number;
+  pares: Array<{
+    positiva: PreguntaParResponse;
+    negativa: PreguntaParResponse;
+  }>;
+  message: string;
+}
+
+/** Respuesta de POST /api/admin/preguntas/crear/ (individual legacy) */
 export interface CrearPreguntaBancoResponse {
   success: boolean;
   pregunta: PreguntaBanco;
@@ -214,13 +262,23 @@ export interface CrearPreguntasBulkResponse {
   message: string;
 }
 
-/** PUT /api/admin/preguntas/<id>/actualizar/ */
-export type ActualizarPreguntaBancoRequest = Partial<CrearPreguntaBancoRequest>;
+/** PUT /api/admin/preguntas/<id>/actualizar/ — solo texto y descripcion, no polaridad */
+export type ActualizarPreguntaBancoRequest = Partial<Pick<CrearPreguntaBancoRequest, 'texto' | 'descripcion' | 'max_elecciones'>>;
 
 /** Respuesta de PUT /api/admin/preguntas/<id>/actualizar/ y editar-copia */
 export interface ActualizarPreguntaBancoResponse {
   success: boolean;
   pregunta: PreguntaBanco;
+}
+
+/** Respuesta de DELETE /api/admin/preguntas/<id>/eliminar/ — elimina el par completo */
+export interface EliminarPreguntaBancoResponse {
+  success: boolean;
+  message: string;
+  eliminadas: {
+    pregunta: { id: number; texto: string; polaridad: PreguntaPolaridad };
+    par: { id: number; texto: string; polaridad: PreguntaPolaridad } | null;
+  };
 }
 
 /** PUT /api/admin/preguntas/<id>/editar-copia/ — editar una pregunta clonada en un cuestionario */

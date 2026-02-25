@@ -26,7 +26,7 @@ function LegendNode({
 
 export function SociogramLegend({ className = '' }: SociogramLegendProps) {
   return (
-    <aside className={`border-l border-black/20 pl-4 xl:pl-5 ${className}`}>
+    <aside className={`${className}`}>
       <h3 className="mb-4 text-sm font-semibold text-gray-800">Leyenda</h3>
 
       <div className="space-y-3">
@@ -62,6 +62,13 @@ export function SociogramLegend({ className = '' }: SociogramLegendProps) {
             <path d="M49 2L55 5L49 8" stroke="#202328" strokeWidth="1.5" />
           </svg>
           <span>Conexiones fuertes</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <svg width="56" height="10" viewBox="0 0 56 10" fill="none" aria-hidden>
+            <path d="M1 5H55" stroke="#202328" strokeWidth="1.5" strokeDasharray="4 2" />
+            <path d="M49 2L55 5L49 8" stroke="#202328" strokeWidth="1.5" />
+          </svg>
+          <span>Conexiones debiles</span>
         </div>
       </div>
     </aside>
