@@ -1,89 +1,117 @@
 /**
  * Servicio de Committee
- * 
- * Maneja las operaciones para el comité de supervisión
+ *
+ * Consume endpoints de solo lectura del backend:
+ * /api/comite/*
  */
 
 import { api } from '../../../core/api/axios';
+import type {
+  CommitteeFilters,
+  CommitteeGraphsResponse,
+  CommitteeOverviewAlertsResponse,
+  CommitteeOverviewCentralityResponse,
+  CommitteeOverviewProgressResponse,
+  CommitteeOverviewResponse,
+  CommitteeQuestionnaireDetailResponse,
+  CommitteeQuestionnaireGroupFilters,
+  CommitteeQuestionnaireProgressResponse,
+  CommitteeQuestionnaireStatsResponse,
+  CommitteeQuestionnaireFilters,
+  CommitteeQuestionnairesResponse,
+} from '../types';
 
-export interface GlobalStats {
-  total_sociogramas: number;
-  sociogramas_activos: number;
-  sociogramas_finalizados: number;
-  total_respuestas: number;
-  tasa_respuesta: number;
-}
+function cleanParams<T extends object>(params?: T): Record<string, unknown> | undefined {
+  if (!params) return undefined;
 
-export interface TutorOverview {
-  id: number;
-  nombre: string;
-  grupos_count: number;
-  sociogramas_activos: number;
-  ultima_actividad?: string;
-}
+  const cleaned = Object.entries(params as Record<string, unknown>).reduce<Record<string, unknown>>((acc, [key, value]) => {
+    if (value === undefined || value === null || value === '') return acc;
+    acc[key] = value;
+    return acc;
+  }, {});
 
-export interface GroupOverview {
-  id: number;
-  nombre: string;
-  tutor: string;
-  periodo: string;
-  sociograma_estado?: string;
-  respuestas_porcentaje: number;
+  return Object.keys(cleaned).length > 0 ? cleaned : undefined;
 }
 
 export const committeeService = {
-  /**
-   * Obtener estadísticas globales
-   */
-  async getGlobalStats(): Promise<GlobalStats> {
-    const response = await api.get('/committee/stats/');
+  // ==========================================
+  // COMITE - CUESTIONARIOS
+  // ==========================================
+
+  async getCuestionarios(
+    params?: CommitteeQuestionnaireFilters
+  ): Promise<CommitteeQuestionnairesResponse> {
+    const response = await api.get<CommitteeQuestionnairesResponse>('/comite/cuestionarios/', {
+      params: cleanParams(params),
+    });
     return response.data;
   },
 
-  /**
-   * Obtener vista general de tutores
-   */
-  async getTutorsOverview(): Promise<TutorOverview[]> {
-    const response = await api.get('/committee/tutors/');
+  async getCuestionarioDetalle(cuestionarioId: number): Promise<CommitteeQuestionnaireDetailResponse> {
+    const response = await api.get<CommitteeQuestionnaireDetailResponse>(
+      `/comite/cuestionarios/${cuestionarioId}/`
+    );
     return response.data;
   },
 
-  /**
-   * Obtener vista general de grupos
-   */
-  async getGroupsOverview(): Promise<GroupOverview[]> {
-    const response = await api.get('/committee/groups/');
+  async getCuestionarioProgreso(
+    cuestionarioId: number,
+    params?: CommitteeQuestionnaireGroupFilters
+  ): Promise<CommitteeQuestionnaireProgressResponse> {
+    const response = await api.get<CommitteeQuestionnaireProgressResponse>(
+      `/comite/cuestionarios/${cuestionarioId}/progreso/`,
+      { params: cleanParams(params) }
+    );
     return response.data;
   },
 
-  /**
-   * Obtener sociogramas por estado
-   */
-  async getSociogramsByStatus(status: 'activo' | 'finalizado' | 'pendiente'): Promise<unknown[]> {
-    const response = await api.get(`/committee/sociograms/?status=${status}`);
+  async getCuestionarioEstadisticas(
+    cuestionarioId: number,
+    params?: CommitteeQuestionnaireGroupFilters
+  ): Promise<CommitteeQuestionnaireStatsResponse> {
+    const response = await api.get<CommitteeQuestionnaireStatsResponse>(
+      `/comite/cuestionarios/${cuestionarioId}/estadisticas/`,
+      { params: cleanParams(params) }
+    );
     return response.data;
   },
 
-  /**
-   * Obtener detalle de sociograma para supervisión
-   */
-  async getSociogramDetail(id: number): Promise<unknown> {
-    const response = await api.get(`/committee/sociograms/${id}/`);
+  // ==========================================
+  // COMITE - DASHBOARD GLOBAL
+  // ==========================================
+
+  async getOverview(params?: CommitteeFilters): Promise<CommitteeOverviewResponse> {
+    const response = await api.get<CommitteeOverviewResponse>('/comite/overview/', {
+      params: cleanParams(params),
+    });
     return response.data;
   },
 
-  /**
-   * Obtener reportes agregados
-   */
-  async getAggregatedReports(filters?: {
-    periodo?: string;
-    division?: string;
-  }): Promise<unknown> {
-    const params = new URLSearchParams();
-    if (filters?.periodo) params.append('periodo', filters.periodo);
-    if (filters?.division) params.append('division', filters.division);
-    
-    const response = await api.get(`/committee/reports/?${params.toString()}`);
+  async getOverviewProgreso(params?: CommitteeFilters): Promise<CommitteeOverviewProgressResponse> {
+    const response = await api.get<CommitteeOverviewProgressResponse>('/comite/overview/progreso/', {
+      params: cleanParams(params),
+    });
+    return response.data;
+  },
+
+  async getOverviewAlertas(params?: CommitteeFilters): Promise<CommitteeOverviewAlertsResponse> {
+    const response = await api.get<CommitteeOverviewAlertsResponse>('/comite/overview/alertas/', {
+      params: cleanParams(params),
+    });
+    return response.data;
+  },
+
+  async getOverviewCentralidad(params?: CommitteeFilters): Promise<CommitteeOverviewCentralityResponse> {
+    const response = await api.get<CommitteeOverviewCentralityResponse>('/comite/overview/centralidad/', {
+      params: cleanParams(params),
+    });
+    return response.data;
+  },
+
+  async getGraphs(params?: CommitteeFilters): Promise<CommitteeGraphsResponse> {
+    const response = await api.get<CommitteeGraphsResponse>('/comite/graphs/', {
+      params: cleanParams(params),
+    });
     return response.data;
   },
 };

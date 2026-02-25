@@ -34,6 +34,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         return '/tutor';
       case 'ALUMNO':
         return '/student';
+      case 'COMITE':
+        return '/committee';
       default:
         return '/';
     }
@@ -68,6 +70,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         ...commonItems,
         { icon: <Folder size={20} />, label: 'Archivos', to: `${basePath}/archivos` },
         { icon: <ClipboardList size={20} />, label: 'Actividad', to: `${basePath}/activity` },
+      ];
+    }
+
+    if (userRole === 'COMITE') {
+      return [
+        ...commonItems,
+        { icon: <ClipboardList size={20} />, label: 'Cuestionarios', to: `${basePath}/cuestionarios` },
+        { icon: <Library size={20} />, label: 'Grafo global', to: `${basePath}/grafo-global` },
       ];
     }
 
