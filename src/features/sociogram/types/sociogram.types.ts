@@ -19,6 +19,7 @@ export type TipoConexion = 'fuerte' | 'media' | 'debil';
 
 /** Nodo del sociograma (alumno) - Respuesta del backend */
 export interface SociogramNodo {
+  numero_lista: number;
   alumno_id: number;
   matricula: string;
   nombre: string;
@@ -74,6 +75,7 @@ export interface EstadisticasResponse {
 export interface GraphNode {
   id: number;
   label: string;
+  numeroLista?: number;
   matricula?: string;
   nombre?: string;
   genero?: 'Masculino' | 'Femenino' | 'Otro';

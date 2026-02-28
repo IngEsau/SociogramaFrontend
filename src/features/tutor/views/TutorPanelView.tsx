@@ -6,6 +6,9 @@
  * 1. Cargando datos iniciales
  * 2. Sin cuestionarios disponibles -> estado vacio con castor
  * 3. Con cuestionario activo -> dashboard completo (grafo, clasificacion, progreso, actividad)
+ *
+ * Clasificacion por pregunta:
+ * - GET /api/academic/cuestionarios/:id/clasificacion-pregunta/?grupo_id=X&pregunta_id=Y
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -19,7 +22,8 @@ import {
 } from '../../sociogram';
 import { tutorService } from '../services';
 import type { SociogramGrupoEstadisticas, EstadisticasResponse } from '../../sociogram/types';
-import type { RegistroResponse } from '../types';
+import type { RegistroResponse, ClasificacionPreguntaResponse } from '../types';
+import type { CuestionarioPregunta } from '../../admin/types';
 import CastorBN from '../../../core/assets/Castor1-BN.png';
 
 const EMPTY_GROUPS: SociogramGrupoEstadisticas[] = [];
@@ -198,6 +202,12 @@ export function TutorPanelView() {
   // Registro de actividades del endpoint /registro/
   const [registroData, setRegistroData] = useState<RegistroResponse | null>(null);
 
+  // Clasificacion por pregunta
+  const [preguntasDisponibles, setPreguntasDisponibles] = useState<CuestionarioPregunta[]>([]);
+  const [selectedPreguntaId, setSelectedPreguntaId] = useState<number | null>(null);
+  const [clasificacionData, setClasificacionData] = useState<ClasificacionPreguntaResponse | null>(null);
+  const [isLoadingClasificacion, setIsLoadingClasificacion] = useState(false);
+
   // Controles de visibilidad (blur) por seccion
   const [isGraphBlurred, setIsGraphBlurred] = useState(false);
   const [isProgressVisible, setIsProgressVisible] = useState(true);
@@ -269,6 +279,15 @@ export function TutorPanelView() {
   }, [selectedGrupo, selectedCuestionario]);
 
   const classificationItems = useMemo(() => {
+    // Prioridad: datos de clasificacion por pregunta
+    if (clasificacionData) {
+      return clasificacionData.ranking.map((item) => ({
+        name: item.nombre,
+        score: item.puntaje_recibido,
+        id: `#${item.numero_lista} · ${item.matricula}`,
+      }));
+    }
+    // Fallback: impacto total general
     if (!selectedGrupo) return undefined;
     return [...selectedGrupo.nodos]
       .sort((a, b) => b.impacto_total - a.impacto_total)
@@ -278,7 +297,7 @@ export function TutorPanelView() {
         score: nodo.impacto_total,
         id: nodo.matricula,
       }));
-  }, [selectedGrupo]);
+  }, [clasificacionData, selectedGrupo]);
 
   const activityItems = useMemo<ActivityItem[] | undefined>(() => {
     // Prioridad: datos del endpoint /registro/ si están disponibles
@@ -467,6 +486,69 @@ export function TutorPanelView() {
     return () => { isCancelled = true; };
   }, [selectedCuestionarioId, selectedGrupoId]);
 
+  // Cargar preguntas del cuestionario activo para el selector de clasificacion
+  useEffect(() => {
+    if (!selectedCuestionarioId) {
+      setPreguntasDisponibles([]);
+      setSelectedPreguntaId(null);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchPreguntas = async () => {
+      try {
+        const cuestionario = await tutorService.getCuestionarioActivo();
+        if (!isCancelled && cuestionario?.preguntas) {
+          setPreguntasDisponibles(cuestionario.preguntas);
+          // Seleccionar la primera pregunta automaticamente
+          setSelectedPreguntaId((current) => {
+            if (current && cuestionario.preguntas!.some((cp) => cp.pregunta.id === current)) return current;
+            return cuestionario.preguntas![0]?.pregunta.id ?? null;
+          });
+        }
+      } catch {
+        if (!isCancelled) {
+          setPreguntasDisponibles([]);
+          setSelectedPreguntaId(null);
+        }
+      }
+    };
+
+    fetchPreguntas();
+    return () => { isCancelled = true; };
+  }, [selectedCuestionarioId]);
+
+  // Cargar clasificacion por pregunta al cambiar cuestionario, grupo o pregunta
+  useEffect(() => {
+    if (!selectedCuestionarioId || !selectedGrupoId || !selectedPreguntaId) {
+      setClasificacionData(null);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchClasificacion = async () => {
+      setIsLoadingClasificacion(true);
+      try {
+        const response = await tutorService.getClasificacionPregunta(
+          selectedCuestionarioId,
+          selectedGrupoId,
+          selectedPreguntaId
+        );
+        if (!isCancelled) setClasificacionData(response);
+      } catch {
+        // Si falla (ej: pregunta no es SELECCION_ALUMNO), se cae al fallback de impacto total
+        if (!isCancelled) setClasificacionData(null);
+      } finally {
+        if (!isCancelled) setIsLoadingClasificacion(false);
+      }
+    };
+
+    fetchClasificacion();
+    return () => { isCancelled = true; };
+  }, [selectedCuestionarioId, selectedGrupoId, selectedPreguntaId]);
+
   // Seleccionar grupo inicial
   useEffect(() => {
     if (groupOptions.length === 0) {
@@ -478,6 +560,26 @@ export function TutorPanelView() {
       return groupOptions[0].id;
     });
   }, [groupOptions]);
+
+  // Ciclar entre preguntas al hacer clic en el filtro de la clasificacion
+  const handleCiclarPregunta = useCallback(() => {
+    if (preguntasDisponibles.length === 0) return;
+    setSelectedPreguntaId((current) => {
+      const idx = preguntasDisponibles.findIndex((cp) => cp.pregunta.id === current);
+      const next = (idx + 1) % preguntasDisponibles.length;
+      return preguntasDisponibles[next].pregunta.id;
+    });
+  }, [preguntasDisponibles]);
+
+  const classificationSubtitle = useMemo(() => {
+    if (!selectedPreguntaId || preguntasDisponibles.length === 0) {
+      return selectedCuestionario?.titulo ?? 'Sin sociograma seleccionado';
+    }
+    const cp = preguntasDisponibles.find((p) => p.pregunta.id === selectedPreguntaId);
+    if (!cp) return selectedCuestionario?.titulo ?? '';
+    const polaridadLabel = cp.pregunta.polaridad === 'NEGATIVA' ? '(-) ' : '(+) ';
+    return `${polaridadLabel}${cp.pregunta.texto}`;
+  }, [selectedPreguntaId, preguntasDisponibles, selectedCuestionario]);
 
   // Funcion para recargar todos los datos
   const [isReloading, setIsReloading] = useState(false);
@@ -613,10 +715,10 @@ export function TutorPanelView() {
           />
           <ClassificationCard
             className="min-h-64"
-            items={noResponses ? undefined : classificationItems}
-            subtitle={selectedCuestionario?.titulo ?? 'Sin sociograma seleccionado'}
-            emptyMessage={emptyMessage}
-            onFilterClick={noResponses ? undefined : () => {}}
+            items={noResponses || isLoadingClasificacion ? undefined : classificationItems}
+            subtitle={classificationSubtitle}
+            emptyMessage={isLoadingClasificacion ? 'Cargando clasificacion...' : emptyMessage}
+            onFilterClick={noResponses || preguntasDisponibles.length <= 1 ? undefined : handleCiclarPregunta}
             onToggleVisibility={noResponses ? undefined : () => setIsClassificationVisible((prev) => !prev)}
             isVisible={isClassificationVisible}
           />
@@ -640,10 +742,10 @@ export function TutorPanelView() {
         />
         <ClassificationCard
           className="flex-1 min-h-0"
-          items={noResponses ? undefined : classificationItems}
-          subtitle={selectedCuestionario?.titulo ?? 'Sin sociograma seleccionado'}
-          emptyMessage={emptyMessage}
-          onFilterClick={noResponses ? undefined : () => {}}
+          items={noResponses || isLoadingClasificacion ? undefined : classificationItems}
+          subtitle={classificationSubtitle}
+          emptyMessage={isLoadingClasificacion ? 'Cargando clasificacion...' : emptyMessage}
+          onFilterClick={noResponses || preguntasDisponibles.length <= 1 ? undefined : handleCiclarPregunta}
           onToggleVisibility={noResponses ? undefined : () => setIsClassificationVisible((prev) => !prev)}
           isVisible={isClassificationVisible}
         />

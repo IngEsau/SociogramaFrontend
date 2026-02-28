@@ -5,11 +5,12 @@
 
 interface SurveyHeaderProps {
   groupName: string;
+  questionnaireTitle?: string;
 }
 
-export const SurveyHeader = ({ groupName }: SurveyHeaderProps) => {
+export const SurveyHeader = ({ groupName, questionnaireTitle }: SurveyHeaderProps) => {
   return (
-    <div 
+    <div
       className="w-full p-4 sm:p-6 md:p-10 lg:p-16 xl:p-20 rounded-2xl border-l border-r border-b border-[#7A1501] border-t-[16px] flex flex-col justify-center items-center gap-2 sm:gap-4 backdrop-blur-[50px]"
       style={{
         background: 'rgba(255, 255, 255, 0.30)',
@@ -28,7 +29,7 @@ export const SurveyHeader = ({ groupName }: SurveyHeaderProps) => {
 
         {/* Título */}
         <h1 className="flex-1 text-[#7A1501] text-base sm:text-xl md:text-2xl lg:text-4xl xl:text-5xl 2xl:text-6xl font-bold font-lato text-center break-words">
-          Encuesta - Sociograma {groupName || '10ºA'}
+          Encuesta - Sociograma {groupName || ''}
         </h1>
 
         {/* Logo Comité */}
@@ -40,11 +41,21 @@ export const SurveyHeader = ({ groupName }: SurveyHeaderProps) => {
         />
       </div>
 
+      {/* Título del cuestionario */}
+      {questionnaireTitle && (
+        <div className="w-full py-2 sm:py-3 border-t border-dashed border-[#7A1501]/30">
+          <p className="text-center text-[#0F7E3C] text-sm sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold font-lato">
+            Cuestionario: {questionnaireTitle}
+          </p>
+        </div>
+      )}
+
       {/* Instrucciones */}
       <div className="w-full flex flex-col justify-start items-center gap-2 sm:gap-4 lg:gap-6">
         <p className="w-full text-justify text-[#245C52] text-xs sm:text-sm md:text-base lg:text-xl xl:text-2xl 2xl:text-[28px] font-medium font-lato">
-          Por favor, recuerda completar todos los campos. Al seleccionar un compañero, en primer lugar otorgará 3 puntos, la segunda elección otorgará 2 puntos y la tercera otorgará 1 punto. Esta información será utilizada para el análisis de grupo.
+          Por favor, recuerda completar todos los campos. En cada pregunta selecciona a <strong>3 compañeros</strong> ordenados según tu preferencia: primero a quien consideres que más corresponde, después a tu segunda opción y por último a tu tercera. Responde con sinceridad, no hay respuestas correctas ni incorrectas.
         </p>
+
         <p className="text-[#0F7E3C] text-xs sm:text-sm md:text-base lg:text-xl xl:text-2xl 2xl:text-[28px] font-bold font-lato">
           ¡Gracias por tu colaboración!
         </p>

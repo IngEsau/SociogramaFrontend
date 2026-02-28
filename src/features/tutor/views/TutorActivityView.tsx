@@ -1,14 +1,15 @@
 /**
  * Vista de Actividad - Tutor
  *
- * Muestra los estudiantes asignados al tutor y los datos del cuestionario activo.
- * Permite previsualizar el cuestionario activo reutilizando la vista de previsualizacion
- * del admin. Incluye filtro de alumnos por nombre o grupo y ordenamiento.
+ * Muestra los estudiantes asignados al tutor con su numero de lista y estado
+ * en el cuestionario activo. Permite previsualizar el cuestionario.
+ * Incluye filtro de alumnos por nombre o grupo y ordenamiento.
  *
  * Endpoints:
- * - GET /api/academic/cuestionarios/       - Listar cuestionarios (para obtener el activo)
- * - GET /api/admin/cuestionarios/:id/      - Detalle del cuestionario activo con preguntas
- * - GET /api/academic/my-groups/           - Grupos del tutor (incluye alumnos de cada grupo)
+ * - GET /api/academic/cuestionarios/                                  - Listar cuestionarios (para obtener el activo)
+ * - GET /api/admin/cuestionarios/:id/                                 - Detalle del cuestionario activo con preguntas
+ * - GET /api/academic/my-groups/                                      - Grupos del tutor (incluye alumnos de cada grupo)
+ * - GET /api/academic/cuestionarios/:id/registro/?grupo_id=X          - Registro de actividad por grupo (numero_lista, estado)
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -18,6 +19,7 @@ import { tutorService } from '../services';
 import type { TutorStudent, TutorGroupSummary } from '../services/tutor.service';
 import type { Cuestionario } from '../../admin/types';
 import type { Question, QuestionAnswer, Student } from '../../student/types/studentForm.types';
+import type { RegistroAlumno } from '../types';
 import {
   SurveyHeader,
   SurveyForm,
@@ -29,7 +31,7 @@ import CastorBN from '../../../core/assets/Castor1-BN.png';
 // Tipos locales
 // ==========================================
 
-type SortMode = 'name' | 'group';
+type SortMode = 'numero_lista' | 'name' | 'group';
 
 // ==========================================
 // Utilidades
@@ -183,50 +185,50 @@ function getEndDateLabel(dateStr?: string): string | null {
 }
 
 // ==========================================
-// Alumnos ficticios para previsualizacion
+// Alumnos ficticios para previsualizacion (ordenados alfabéticamente)
 // ==========================================
 
 const PREVIEW_STUDENTS: Student[] = [
-  { id: '1', name: 'Jesus Aguilar Perez Osorno' },
+  { id: '24', name: 'Alejandro David Castro Ramos' },
+  { id: '16', name: 'Andres Felipe Munoz Castillo' },
   { id: '2', name: 'Ana Maria Martinez Sanchez' },
+  { id: '23', name: 'Andrea Carolina Gutierrez Leon' },
   { id: '3', name: 'Carlos Eduardo Ramirez Lopez' },
-  { id: '4', name: 'Luis Fernando Hernandez Garcia' },
-  { id: '5', name: 'Maria Guadalupe Gonzalez Torres' },
-  { id: '6', name: 'Pedro Antonio Lopez Ramirez' },
-  { id: '7', name: 'Sofia Isabella Diaz Morales' },
+  { id: '11', name: 'Carmen Elena Rodriguez Silva' },
+  { id: '27', name: 'Carolina Victoria Vazquez Salazar' },
+  { id: '21', name: 'Daniela Sofia Medina Aguilar' },
+  { id: '33', name: 'Diana Marcela Soto Villanueva' },
+  { id: '18', name: 'Diego Armando Vargas Herrera' },
+  { id: '36', name: 'Eduardo Jose Estrada Pineda' },
+  { id: '26', name: 'Emilio Sebastian Pena Carrillo' },
+  { id: '14', name: 'Fernando Javier Alvarez Rojas' },
+  { id: '17', name: 'Gabriela Alejandra Cruz Mendoza' },
+  { id: '34', name: 'Hector Manuel Rios Sandoval' },
+  { id: '15', name: 'Isabel Cristina Romero Navarro' },
+  { id: '22', name: 'Javier Enrique Molina Rios' },
+  { id: '1', name: 'Jesus Aguilar Perez Osorno' },
+  { id: '40', name: 'Jorge Luis Acosta Velazquez' },
   { id: '8', name: 'Jose Manuel Garcia Ruiz' },
   { id: '9', name: 'Laura Patricia Fernandez Castro' },
-  { id: '10', name: 'Miguel Angel Sanchez Perez' },
-  { id: '11', name: 'Carmen Elena Rodriguez Silva' },
-  { id: '12', name: 'Roberto Carlos Jimenez Ortiz' },
-  { id: '13', name: 'Patricia Lorena Torres Vega' },
-  { id: '14', name: 'Fernando Javier Alvarez Rojas' },
-  { id: '15', name: 'Isabel Cristina Romero Navarro' },
-  { id: '16', name: 'Andres Felipe Munoz Castillo' },
-  { id: '17', name: 'Gabriela Alejandra Cruz Mendoza' },
-  { id: '18', name: 'Diego Armando Vargas Herrera' },
-  { id: '19', name: 'Valentina Maria Reyes Campos' },
-  { id: '20', name: 'Ricardo Alberto Flores Guerrero' },
-  { id: '21', name: 'Daniela Sofia Medina Aguilar' },
-  { id: '22', name: 'Javier Enrique Molina Rios' },
-  { id: '23', name: 'Andrea Carolina Gutierrez Leon' },
-  { id: '24', name: 'Alejandro David Castro Ramos' },
-  { id: '25', name: 'Natalia Fernanda Ortiz Delgado' },
-  { id: '26', name: 'Emilio Sebastian Pena Carrillo' },
-  { id: '27', name: 'Carolina Victoria Vazquez Salazar' },
-  { id: '28', name: 'Sergio Ivan Mendez Cortes' },
-  { id: '29', name: 'Paola Andrea Ruiz Montero' },
-  { id: '30', name: 'Raul Eduardo Dominguez Paredes' },
   { id: '31', name: 'Lucia Fernanda Herrera Espinoza' },
-  { id: '32', name: 'Omar Alejandro Moreno Fuentes' },
-  { id: '33', name: 'Diana Marcela Soto Villanueva' },
-  { id: '34', name: 'Hector Manuel Rios Sandoval' },
-  { id: '35', name: 'Monica Patricia Duran Cabrera' },
-  { id: '36', name: 'Eduardo Jose Estrada Pineda' },
-  { id: '37', name: 'Rosa Maria Juarez Contreras' },
-  { id: '38', name: 'Victor Hugo Cervantes Ibarra' },
+  { id: '4', name: 'Luis Fernando Hernandez Garcia' },
+  { id: '5', name: 'Maria Guadalupe Gonzalez Torres' },
   { id: '39', name: 'Mariana Isabela Lara Montes' },
-  { id: '40', name: 'Jorge Luis Acosta Velazquez' },
+  { id: '10', name: 'Miguel Angel Sanchez Perez' },
+  { id: '35', name: 'Monica Patricia Duran Cabrera' },
+  { id: '25', name: 'Natalia Fernanda Ortiz Delgado' },
+  { id: '32', name: 'Omar Alejandro Moreno Fuentes' },
+  { id: '29', name: 'Paola Andrea Ruiz Montero' },
+  { id: '13', name: 'Patricia Lorena Torres Vega' },
+  { id: '6', name: 'Pedro Antonio Lopez Ramirez' },
+  { id: '30', name: 'Raul Eduardo Dominguez Paredes' },
+  { id: '20', name: 'Ricardo Alberto Flores Guerrero' },
+  { id: '12', name: 'Roberto Carlos Jimenez Ortiz' },
+  { id: '37', name: 'Rosa Maria Juarez Contreras' },
+  { id: '28', name: 'Sergio Ivan Mendez Cortes' },
+  { id: '7', name: 'Sofia Isabella Diaz Morales' },
+  { id: '19', name: 'Valentina Maria Reyes Campos' },
+  { id: '38', name: 'Victor Hugo Cervantes Ibarra' },
 ];
 
 // ==========================================
@@ -238,10 +240,12 @@ export function TutorActivityView() {
   const [students, setStudents] = useState<TutorStudent[]>([]);
   const [groups, setGroups] = useState<TutorGroupSummary[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [registroAlumnos, setRegistroAlumnos] = useState<RegistroAlumno[]>([]);
+  const [isLoadingRegistro, setIsLoadingRegistro] = useState(false);
   const [isLoadingCuestionario, setIsLoadingCuestionario] = useState(true);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortMode, setSortMode] = useState<SortMode>('name');
+  const [sortMode, setSortMode] = useState<SortMode>('numero_lista');
   const [showPreview, setShowPreview] = useState(false);
 
   const { setTopbarConfig, resetTopbar } = useTopbarStore();
@@ -284,6 +288,38 @@ export function TutorActivityView() {
     fetchStudents();
   }, [fetchCuestionarioActivo, fetchStudents]);
 
+  // Seleccionar el primer grupo cuando se carguen los grupos
+  useEffect(() => {
+    if (groups.length > 0 && selectedGroupId === null) {
+      setSelectedGroupId(groups[0].id);
+    }
+  }, [groups, selectedGroupId]);
+
+  // Cargar registro de actividad cuando cambia el cuestionario o el grupo seleccionado
+  useEffect(() => {
+    if (!cuestionarioActivo || !selectedGroupId) {
+      setRegistroAlumnos([]);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchRegistro = async () => {
+      setIsLoadingRegistro(true);
+      try {
+        const response = await tutorService.getCuestionarioRegistro(cuestionarioActivo.id, selectedGroupId);
+        if (!isCancelled) setRegistroAlumnos(response.alumnos);
+      } catch {
+        if (!isCancelled) setRegistroAlumnos([]);
+      } finally {
+        if (!isCancelled) setIsLoadingRegistro(false);
+      }
+    };
+
+    fetchRegistro();
+    return () => { isCancelled = true; };
+  }, [cuestionarioActivo, selectedGroupId]);
+
   // Topbar: solo boton de previsualizar
   useEffect(() => {
     setTopbarConfig({
@@ -303,34 +339,77 @@ export function TutorActivityView() {
   }, [setTopbarConfig, resetTopbar, cuestionarioActivo]);
 
   // Filtrar y ordenar alumnos
+  // Cuando hay un grupo seleccionado y registro disponible, los alumnos del registro
+  // son la fuente principal (contienen numero_lista y estado). Si no, se usan los alumnos
+  // basicos de my-groups filtrados por grupo.
   const filteredStudents = useMemo(() => {
-    let result = [...students];
+    // Determinar la lista base
+    let baseList: Array<{
+      id: number;
+      matricula: string;
+      nombre_completo: string;
+      email: string;
+      grupo_id: number;
+      grupo_clave: string;
+      numero_lista?: number;
+      estado?: RegistroAlumno['estado'];
+    }>;
+
+    if (selectedGroupId && registroAlumnos.length > 0) {
+      // Datos enriquecidos desde el registro del cuestionario
+      baseList = registroAlumnos.map((ra) => ({
+        id: ra.alumno_id,
+        matricula: ra.matricula,
+        nombre_completo: ra.nombre,
+        email: '',
+        grupo_id: selectedGroupId,
+        grupo_clave: groups.find((g) => g.id === selectedGroupId)?.clave ?? '',
+        numero_lista: ra.numero_lista,
+        estado: ra.estado,
+      }));
+    } else {
+      // Fallback: datos basicos de my-groups, filtrados por grupo si aplica
+      baseList = (selectedGroupId
+        ? students.filter((s) => s.grupo_id === selectedGroupId)
+        : students
+      ).map((s) => ({
+        id: s.id,
+        matricula: s.matricula,
+        nombre_completo: s.nombre_completo,
+        email: s.email,
+        grupo_id: s.grupo_id,
+        grupo_clave: s.grupo_clave,
+        numero_lista: undefined,
+        estado: undefined,
+      }));
+    }
 
     // Busqueda
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(
+      baseList = baseList.filter(
         (s) =>
           s.nombre_completo.toLowerCase().includes(query) ||
           s.matricula.toLowerCase().includes(query) ||
-          s.email.toLowerCase().includes(query) ||
           s.grupo_clave.toLowerCase().includes(query)
       );
     }
 
     // Ordenamiento
-    if (sortMode === 'name') {
-      result.sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo, 'es'));
+    if (sortMode === 'numero_lista') {
+      baseList.sort((a, b) => (a.numero_lista ?? 999) - (b.numero_lista ?? 999));
+    } else if (sortMode === 'name') {
+      baseList.sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo, 'es'));
     } else {
-      result.sort((a, b) => {
+      baseList.sort((a, b) => {
         const groupCompare = a.grupo_clave.localeCompare(b.grupo_clave, 'es');
         if (groupCompare !== 0) return groupCompare;
-        return a.nombre_completo.localeCompare(b.nombre_completo, 'es');
+        return (a.numero_lista ?? 999) - (b.numero_lista ?? 999);
       });
     }
 
-    return result;
-  }, [students, searchQuery, sortMode]);
+    return baseList;
+  }, [students, registroAlumnos, groups, selectedGroupId, searchQuery, sortMode]);
 
   // Previsualizacion
   if (showPreview && cuestionarioActivo) {
@@ -363,12 +442,35 @@ export function TutorActivityView() {
         <div
           className="w-full lg:w-[66%] rounded-lg border border-[#0F7E3C]/50 shadow-md bg-white p-4 flex flex-col gap-3 min-h-0"
         >
-          <h2 className="text-xl font-extrabold text-[#0F7E3C] font-lato shrink-0">
-            Estudiantes Asignados
-          </h2>
+          {/* Encabezado con selector de grupo */}
+          <div className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <h2 className="text-xl font-extrabold text-[#0F7E3C] font-lato">
+              Estudiantes Asignados
+            </h2>
+            {groups.length > 1 && (
+              <select
+                value={selectedGroupId ?? ''}
+                onChange={(e) => setSelectedGroupId(e.target.value === '' ? null : Number(e.target.value))}
+                className="h-9 px-3 rounded-lg border border-[#0F7E3C]/50 shadow-sm bg-white
+                           text-sm font-lato font-medium text-black focus:outline-none focus:ring-2
+                           focus:ring-[#0F7E3C]/30 appearance-none cursor-pointer"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%230F7E3C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.4rem center',
+                  paddingRight: '2rem',
+                }}
+              >
+                <option value="">Todos los grupos</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.clave}</option>
+                ))}
+              </select>
+            )}
+          </div>
 
           {/* Barra de busqueda y filtro */}
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 shrink-0">
             <div className="flex-1 relative">
               <input
                 type="text"
@@ -392,6 +494,7 @@ export function TutorActivityView() {
                 className="h-10 px-3 rounded-lg border border-[#0F7E3C]/50 shadow-sm bg-white
                            text-sm font-lato font-medium text-black focus:outline-none focus:ring-2 focus:ring-[#0F7E3C]/30"
               >
+                <option value="numero_lista">Por lista</option>
                 <option value="name">Por nombre</option>
                 <option value="group">Por grupo</option>
               </select>
@@ -400,7 +503,7 @@ export function TutorActivityView() {
 
           {/* Lista de estudiantes */}
           <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pr-1">
-            {isLoadingStudents ? (
+            {isLoadingStudents || isLoadingRegistro ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 size={24} className="animate-spin text-[#245C52]" />
               </div>
@@ -415,7 +518,11 @@ export function TutorActivityView() {
               </div>
             ) : (
               filteredStudents.map((student) => (
-                <StudentCard key={`${student.grupo_id}-${student.id}`} student={student} />
+                <StudentCard
+                  key={`${student.grupo_id}-${student.id}`}
+                  student={student}
+                  showGroupBadge={!selectedGroupId || groups.length > 1}
+                />
               ))
             )}
           </div>
@@ -454,21 +561,63 @@ export function TutorActivityView() {
 // Tarjeta de estudiante
 // ==========================================
 
-function StudentCard({ student }: { student: TutorStudent }) {
+interface StudentCardData {
+  id: number;
+  matricula: string;
+  nombre_completo: string;
+  email: string;
+  grupo_id: number;
+  grupo_clave: string;
+  numero_lista?: number;
+  estado?: RegistroAlumno['estado'];
+}
+
+const ESTADO_STYLES: Record<NonNullable<StudentCardData['estado']>, { label: string; className: string }> = {
+  COMPLETADO:   { label: 'Completado',   className: 'bg-[#0F7E3C]/10 text-[#0F7E3C] border border-[#0F7E3C]/30' },
+  EN_PROGRESO:  { label: 'En progreso',  className: 'bg-amber-50 text-amber-700 border border-amber-300' },
+  PENDIENTE:    { label: 'Pendiente',    className: 'bg-gray-100 text-gray-500 border border-gray-300' },
+};
+
+function StudentCard({
+  student,
+  showGroupBadge = true,
+}: {
+  student: StudentCardData;
+  showGroupBadge?: boolean;
+}) {
+  const estadoInfo = student.estado ? ESTADO_STYLES[student.estado] : null;
+
   return (
-    <div className="flex items-center justify-between px-4 py-2 rounded-lg border border-[#0F7E3C]/50 shadow-md bg-white">
-      <div className="flex flex-col min-w-0">
-        <span className="text-lg font-bold text-black font-lato truncate lg:text-xl">
+    <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-[#0F7E3C]/50 shadow-md bg-white">
+      {/* Numero de lista */}
+      {student.numero_lista !== undefined && (
+        <span className="shrink-0 w-7 text-center text-sm font-bold text-[#0F7E3C]/60 font-lato select-none">
+          {student.numero_lista}
+        </span>
+      )}
+
+      {/* Nombre y matricula */}
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="text-base font-bold text-black font-lato truncate lg:text-lg leading-tight">
           {student.nombre_completo}
         </span>
-        <span className="text-sm text-[#6D6D6D] font-lato truncate">
-          {student.email}
+        <span className="text-xs text-[#6D6D6D] font-lato">
+          {student.matricula}
         </span>
       </div>
-      <div className="shrink-0 ml-3 px-2 py-1 rounded-lg border border-[#0F7E3C]/50 shadow-sm">
-        <span className="text-base font-bold text-[#0F7E3C] font-lato whitespace-nowrap">
-          {student.grupo_clave}
-        </span>
+
+      {/* Badges: estado y grupo */}
+      <div className="shrink-0 flex items-center gap-2">
+        {estadoInfo && (
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${estadoInfo.className}`}>
+            {estadoInfo.label}
+          </span>
+        )}
+        {showGroupBadge && student.grupo_clave && (
+          <span className="text-sm font-bold text-[#0F7E3C] px-2 py-1 rounded-lg border border-[#0F7E3C]/50 whitespace-nowrap">
+            {student.grupo_clave}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -724,7 +873,7 @@ function PreviewView({ cuestionario, onBack }: PreviewViewProps) {
           <DecorativeCircles />
 
           <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 py-8 sm:py-12 md:py-16 lg:py-20 flex flex-col items-center gap-6 sm:gap-8">
-            <SurveyHeader groupName={cuestionario.titulo} />
+            <SurveyHeader groupName={cuestionario.titulo} questionnaireTitle={cuestionario.titulo} />
 
             {questions.length > 0 ? (
               <SurveyForm

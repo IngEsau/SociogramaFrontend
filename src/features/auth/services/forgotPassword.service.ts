@@ -28,7 +28,7 @@ export const forgotPasswordService = async (
   // return response.data;
 
   // Simulación temporal (solo para propósitos de desarrollo)
-  console.log('Solicitud de recuperación para:', data.email);
+  void data; // Evitar advertencia de variable no usada
 
   return new Promise((resolve) => {
     setTimeout(() => {

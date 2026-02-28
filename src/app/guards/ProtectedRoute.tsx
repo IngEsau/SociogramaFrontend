@@ -36,8 +36,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       if (localStorage.getItem('access_token') && !user) {
         try {
           await fetchProfile();
-        } catch (error) {
-          console.error('Error al verificar autenticación:', error);
+        } catch {
+          // Token inválido o expirado, el interceptor se encargará de redirigir
         }
       }
       setIsChecking(false);

@@ -95,6 +95,7 @@ export interface SociogramMetrics {
 // --- Registro de actividades por cuestionario ---
 
 export interface RegistroAlumno {
+  numero_lista: number;
   alumno_id: number;
   matricula: string;
   nombre: string;
@@ -119,4 +120,26 @@ export interface RegistroResponse {
   grupo_clave: string;
   resumen: RegistroResumen;
   alumnos: RegistroAlumno[];
+}
+
+// --- Clasificacion por pregunta ---
+
+export interface ClasificacionAlumno {
+  rank: number;
+  numero_lista: number;
+  alumno_id: number;
+  matricula: string;
+  nombre: string;
+  puntaje_recibido: number;
+}
+
+export interface ClasificacionPreguntaResponse {
+  cuestionario_id: number;
+  cuestionario_titulo: string;
+  grupo_id: number;
+  grupo_clave: string;
+  pregunta_id: number;
+  pregunta_texto: string;
+  pregunta_polaridad: 'POSITIVA' | 'NEGATIVA';
+  ranking: ClasificacionAlumno[];
 }

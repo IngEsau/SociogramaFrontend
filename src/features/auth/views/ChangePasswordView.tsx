@@ -11,6 +11,7 @@ import { AuthBackground, AuthFooter } from '../components';
 import { validatePasswordRequirements } from '../../../core/utils/passwordStrength';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../../../store';
+import { getHomePath } from '../../../core/routing';
 
 export const ChangePasswordView = () => {
   // Estado local para los inputs
@@ -22,9 +23,9 @@ export const ChangePasswordView = () => {
   const [countdown, setCountdown] = useState(3);
 
   const navigate = useNavigate();
-  const { completeFirstLoginPasswordChange } = useAuthStore();
+  const { completeFirstLoginPasswordChange, user } = useAuthStore();
 
-  // Countdown cuando hay éxito
+  // Countdown cuando hay éxito: redirige al home del rol correspondiente
   useEffect(() => {
     if (success && countdown > 0) {
       const timer = setTimeout(() => {
@@ -32,9 +33,9 @@ export const ChangePasswordView = () => {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (success && countdown === 0) {
-      navigate('/dashboard');
+      navigate(user ? getHomePath(user) : '/login');
     }
-  }, [success, countdown, navigate]);
+  }, [success, countdown, navigate, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +62,6 @@ export const ChangePasswordView = () => {
 
     try {
       setIsLoading(true);
-      console.log('Intentando cambiar contraseña de primer inicio de sesión...');
 
       // Llamar al servicio de cambio de contraseña de primer login
       await authService.firstLoginChangePassword({
@@ -72,7 +72,6 @@ export const ChangePasswordView = () => {
       // Actualizar el estado del store
       await completeFirstLoginPasswordChange();
 
-      console.log('✓ Contraseña cambiada exitosamente');
       setSuccess('Contraseña actualizada exitosamente.');
 
       // Limpiar campos
@@ -80,8 +79,6 @@ export const ChangePasswordView = () => {
       setConfirmPassword('');
 
     } catch (err) {
-      console.error('✗ Error al cambiar contraseña:', err);
-      
       // Manejar errores de la API
       const error = err as { response?: { data?: { error?: string; detail?: string; new_password?: string[] } } };
       

@@ -129,7 +129,7 @@ function buildSimulation(
   const relevanciaById = new Map<number, number>();
   seeded.forEach((n) => relevanciaById.set(n.id, n.relevancia));
 
-  const repulsionFactor = 9500;
+  const repulsionFactor = 14000;
   const springFactor = 0.025;
   // Fuerza central variable: los nodos mas relevantes son mas atraidos al centro
   const centerForceBase = 0.003;
@@ -147,7 +147,8 @@ function buildSimulation(
         const dy = b.y - a.y;
         const distSq = dx * dx + dy * dy + 0.1;
         const dist = Math.sqrt(distSq);
-        const minDist = a.radius + b.radius + 28;
+        // Separacion minima: suma de radios + margen para que nunca se peguen
+        const minDist = a.radius + b.radius + 50;
         const force = (repulsionFactor * minDist * minDist) / distSq;
         const fx = (dx / dist) * force;
         const fy = (dy / dist) * force;
@@ -168,8 +169,8 @@ function buildSimulation(
       const dx = target.x - source.x;
       const dy = target.y - source.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      // Aristas reciprocas (conexion fuerte) atraen mas
-      const idealDistance = source.radius + target.radius + (edge.reciproco ? 20 : 48);
+      // Aristas reciprocas (conexion fuerte) atraen mas pero con margen suficiente
+      const idealDistance = source.radius + target.radius + (edge.reciproco ? 36 : 60);
       const stretch = dist - idealDistance;
       const force = stretch * springFactor;
       const fx = (dx / dist) * force;
@@ -206,6 +207,41 @@ function buildSimulation(
     });
   }
 
+  // Fase final: resolucion de colisiones para garantizar separacion minima
+  const minGap = 12; // pixeles minimos entre bordes de nodos
+  for (let pass = 0; pass < 50; pass += 1) {
+    let resolved = true;
+    for (let i = 0; i < states.length; i += 1) {
+      const a = states[i];
+      for (let j = i + 1; j < states.length; j += 1) {
+        const b = states[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 0.1;
+        const requiredDist = a.radius + b.radius + minGap;
+
+        if (dist < requiredDist) {
+          resolved = false;
+          const overlap = (requiredDist - dist) / 2 + 1;
+          const ux = dx / dist;
+          const uy = dy / dist;
+
+          a.x -= ux * overlap;
+          a.y -= uy * overlap;
+          b.x += ux * overlap;
+          b.y += uy * overlap;
+
+          // Re-clamp dentro del viewbox
+          a.x = clamp(a.x, PADDING + a.radius, width - PADDING - a.radius);
+          a.y = clamp(a.y, PADDING + a.radius, height - PADDING - a.radius);
+          b.x = clamp(b.x, PADDING + b.radius, width - PADDING - b.radius);
+          b.y = clamp(b.y, PADDING + b.radius, height - PADDING - b.radius);
+        }
+      }
+    }
+    if (resolved) break;
+  }
+
   return stateById;
 }
 
@@ -220,29 +256,20 @@ function getEdgePath(
   const ux = dx / dist;
   const uy = dy / dist;
 
-  // Para aristas reciprocas dejamos espacio para la punta de inicio tambien
-  const startOffset = reciprocal ? source.radius + 6 : source.radius - 1;
-  const endOffset = target.radius + 6;
+  // markerUnits="strokeWidth" con markerWidth=6 y strokeWidth=2 => punta de ~12px efectivos
+  const arrowTipSize = 12;
+  const startOffset = reciprocal
+    ? source.radius + arrowTipSize + 2
+    : source.radius + 2;
+  const endOffset = target.radius + arrowTipSize + 2;
 
   const startX = source.x + ux * startOffset;
   const startY = source.y + uy * startOffset;
   const endX = target.x - ux * endOffset;
   const endY = target.y - uy * endOffset;
 
-  if (!reciprocal) {
-    return `M ${roundTo1(startX)} ${roundTo1(startY)} L ${roundTo1(endX)} ${roundTo1(endY)}`;
-  }
-
-  // Curva cuadratica para aristas reciprocas (conexion fuerte)
-  const midX = (startX + endX) / 2;
-  const midY = (startY + endY) / 2;
-  const perpX = -uy;
-  const perpY = ux;
-  const curveMagnitude = 26;
-  const controlX = midX + perpX * curveMagnitude;
-  const controlY = midY + perpY * curveMagnitude;
-
-  return `M ${roundTo1(startX)} ${roundTo1(startY)} Q ${roundTo1(controlX)} ${roundTo1(controlY)} ${roundTo1(endX)} ${roundTo1(endY)}`;
+  // Siempre linea recta, tanto para conexiones fuertes como debiles
+  return `M ${roundTo1(startX)} ${roundTo1(startY)} L ${roundTo1(endX)} ${roundTo1(endY)}`;
 }
 
 export function SociogramGraph({
@@ -258,6 +285,10 @@ export function SociogramGraph({
   onToggleNodeNames,
 }: SociogramGraphProps) {
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const isPanningRef = useRef(false);
+  const lastPointerRef = useRef({ x: 0, y: 0 });
+  const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
   const hideTooltipTimerRef = useRef<number | null>(null);
 
@@ -314,23 +345,70 @@ export function SociogramGraph({
 
   const centerX = VIEWBOX_WIDTH / 2;
   const centerY = VIEWBOX_HEIGHT / 2;
-  const zoomTransform = `translate(${centerX} ${centerY}) scale(${zoom}) translate(${-centerX} ${-centerY})`;
+  const zoomTransform = `translate(${centerX + pan.x} ${centerY + pan.y}) scale(${zoom}) translate(${-centerX} ${-centerY})`;
 
   return (
     <div className={`relative rounded-xl border border-emerald-600/35 bg-[#f4f5f6] ${className}`}>
-      {/* Overlay de blur cuando isBlurred */}
-      {isBlurred && (
-        <div
-          className="absolute inset-0 z-20 rounded-xl"
-          style={{ backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' }}
-        />
-      )}
+      {/* Overlay de blur con fade */}
+      <div
+        className="absolute inset-0 z-20 rounded-xl pointer-events-none transition-opacity duration-300"
+        style={{
+          backdropFilter: 'blur(18px)',
+          WebkitBackdropFilter: 'blur(18px)',
+          opacity: isBlurred ? 1 : 0,
+          pointerEvents: isBlurred ? 'auto' : 'none',
+        }}
+      />
 
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
         className="h-full min-h-105 w-full rounded-xl"
         role="img"
         aria-label="Grafo del sociograma"
+        style={{ cursor: 'grab', touchAction: 'none' }}
+        onMouseDown={(e) => {
+          // Solo panning con boton izquierdo y sin hover en nodo
+          if (e.button !== 0) return;
+          isPanningRef.current = true;
+          lastPointerRef.current = { x: e.clientX, y: e.clientY };
+          e.currentTarget.style.cursor = 'grabbing';
+        }}
+        onMouseMove={(e) => {
+          if (!isPanningRef.current) return;
+          const dx = e.clientX - lastPointerRef.current.x;
+          const dy = e.clientY - lastPointerRef.current.y;
+          lastPointerRef.current = { x: e.clientX, y: e.clientY };
+          // Convertir delta de pixeles CSS a unidades del viewBox
+          const rect = e.currentTarget.getBoundingClientRect();
+          const scaleX = VIEWBOX_WIDTH / rect.width;
+          const scaleY = VIEWBOX_HEIGHT / rect.height;
+          setPan((prev) => ({ x: prev.x + dx * scaleX, y: prev.y + dy * scaleY }));
+        }}
+        onMouseUp={(e) => {
+          isPanningRef.current = false;
+          e.currentTarget.style.cursor = 'grab';
+        }}
+        onMouseLeave={(e) => {
+          isPanningRef.current = false;
+          e.currentTarget.style.cursor = 'grab';
+        }}
+        onTouchStart={(e) => {
+          if (e.touches.length !== 1) return;
+          isPanningRef.current = true;
+          lastPointerRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }}
+        onTouchMove={(e) => {
+          if (!isPanningRef.current || e.touches.length !== 1) return;
+          const dx = e.touches[0].clientX - lastPointerRef.current.x;
+          const dy = e.touches[0].clientY - lastPointerRef.current.y;
+          lastPointerRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          const rect = e.currentTarget.getBoundingClientRect();
+          const scaleX = VIEWBOX_WIDTH / rect.width;
+          const scaleY = VIEWBOX_HEIGHT / rect.height;
+          setPan((prev) => ({ x: prev.x + dx * scaleX, y: prev.y + dy * scaleY }));
+        }}
+        onTouchEnd={() => { isPanningRef.current = false; }}
       >
         <defs>
           <radialGradient id="node-accepted" cx="30%" cy="25%">
@@ -349,17 +427,13 @@ export function SociogramGraph({
             <stop offset="100%" stopColor="#2E3136" />
           </radialGradient>
 
-          {/* Punta de flecha fin — conexiones normales */}
-          <marker id="arrow-end" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#21242A" />
+          {/* Punta de flecha fin — todas las conexiones */}
+          <marker id="arrow-end" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
+            <polygon points="0 0, 6 2.5, 0 5" fill="#1A1A1A" />
           </marker>
           {/* Punta de flecha inicio — conexiones fuertes (reciprocas) */}
-          <marker id="arrow-start" markerWidth="10" markerHeight="7" refX="2" refY="3.5" orient="auto-start-reverse">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#21242A" />
-          </marker>
-          {/* Punta de flecha fin — rechazos */}
-          <marker id="arrow-end-neg" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#5A0D0D" />
+          <marker id="arrow-start" markerWidth="6" markerHeight="5" refX="0" refY="2.5" orient="auto-start-reverse" markerUnits="strokeWidth">
+            <polygon points="0 0, 6 2.5, 0 5" fill="#1A1A1A" />
           </marker>
         </defs>
 
@@ -370,17 +444,14 @@ export function SociogramGraph({
             if (!source || !target) return null;
 
             const path = getEdgePath(source, target, Boolean(edge.reciproco));
-            const isRechazo = edge.type === 'rechazo';
             const isReciproca = Boolean(edge.reciproco);
 
-            // Conexion fuerte (reciproca): linea continua mas gruesa, doble punta
-            // Conexion debil (una direccion): linea mas fina, una punta
-            const edgeColor = isRechazo ? '#5A0D0D' : '#21242A';
-            const strokeWidth = isReciproca
-              ? clamp(1.8 + (edge.weight ?? 1) * 0.18, 2, 4)
-              : clamp(1 + (edge.weight ?? 1) * 0.12, 1, 2.5);
+            // Color negro uniforme para todas las conexiones
+            const edgeColor = '#1A1A1A';
+            // Grosor identico para todos los tipos de conexion
+            const strokeWidth = 2;
 
-            const markerEnd = isRechazo ? 'url(#arrow-end-neg)' : 'url(#arrow-end)';
+            const markerEnd = 'url(#arrow-end)';
             const markerStart = isReciproca ? 'url(#arrow-start)' : undefined;
 
             return (
@@ -392,7 +463,7 @@ export function SociogramGraph({
                 fill="none"
                 markerEnd={markerEnd}
                 markerStart={markerStart}
-                opacity={isReciproca ? 1 : 0.85}
+                opacity={1}
               />
             );
           })}
@@ -455,9 +526,9 @@ export function SociogramGraph({
                   strokeWidth={1.2}
                   style={{ userSelect: 'none' }}
                 >
-                  {node.label}
+                  {showNodeNames ? node.label : ''}
                 </text>
-                {/* El nombre se muestra en el tooltip al hacer hover, no bajo la bolita */}
+                {/* El numero de lista se muestra en la bolita solo cuando showNodeNames=true */}
               </g>
             );
           })}
@@ -471,18 +542,18 @@ export function SociogramGraph({
             const nombreDisplay = nombre.length > 28 ? nombre.slice(0, 26) + '…' : nombre;
 
             // Dimensiones del tooltip: con nombre es mas alto
-            const tooltipW = showNodeNames ? 230 : 160;
-            const tooltipH = showNodeNames ? 92 : 66;
-            const rowH = 18; // altura de cada fila de pts
-            const pad = 12;  // padding interno
+            const tooltipW = showNodeNames ? 260 : 180;
+            const tooltipH = showNodeNames ? 106 : 76;
+            const rowH = 22; // altura de cada fila de pts
+            const pad = 13;  // padding interno
 
-            const rawX = ((hoveredNode.simNode.x - centerX) * zoom) + centerX + hoveredNode.simNode.radius * zoom + 12;
-            const rawY = ((hoveredNode.simNode.y - centerY) * zoom) + centerY - tooltipH / 2;
+            const rawX = ((hoveredNode.simNode.x - centerX) * zoom) + centerX + pan.x + hoveredNode.simNode.radius * zoom + 12;
+            const rawY = ((hoveredNode.simNode.y - centerY) * zoom) + centerY + pan.y - tooltipH / 2;
             const tx = clamp(rawX, 8, VIEWBOX_WIDTH - tooltipW - 8);
             const ty = clamp(rawY, 8, VIEWBOX_HEIGHT - tooltipH - 8);
 
             // Posicion Y de la fila de puntos segun si hay nombre
-            const ptsStartY = showNodeNames ? 52 : pad + 8;
+            const ptsStartY = showNodeNames ? 58 : pad + 8;
 
             return (
               <g transform={`translate(${tx} ${ty})`} pointerEvents="none">
@@ -503,13 +574,13 @@ export function SociogramGraph({
                       href={personRoundedIcon}
                       x={pad}
                       y={pad}
-                      width={15}
-                      height={15}
+                      width={17}
+                      height={17}
                     />
                     <text
-                      x={pad + 19}
-                      y={pad + 12}
-                      fontSize="12.5"
+                      x={pad + 22}
+                      y={pad + 13}
+                      fontSize="14"
                       fontFamily="Lato, sans-serif"
                       fontWeight={700}
                       fill="#2E2E2E"
@@ -529,13 +600,13 @@ export function SociogramGraph({
                 {/* --- Fila pts positivos --- */}
                 <rect
                   x={pad} y={ptsStartY}
-                  width={15} height={15} rx="3"
+                  width={16} height={16} rx="3"
                   fill="#0B9624"
                 />
                 <text
-                  x={pad + 20}
-                  y={ptsStartY + 12}
-                  fontSize="12.5"
+                  x={pad + 22}
+                  y={ptsStartY + 13}
+                  fontSize="14"
                   fontFamily="Lato, sans-serif"
                   fontWeight={700}
                   fill="#000000"
@@ -547,13 +618,13 @@ export function SociogramGraph({
                 {/* --- Fila pts negativos --- */}
                 <rect
                   x={pad} y={ptsStartY + rowH + 2}
-                  width={15} height={15} rx="3"
+                  width={16} height={16} rx="3"
                   fill="#7A1501"
                 />
                 <text
-                  x={pad + 20}
-                  y={ptsStartY + rowH + 2 + 12}
-                  fontSize="12.5"
+                  x={pad + 22}
+                  y={ptsStartY + rowH + 2 + 13}
+                  fontSize="14"
                   fontFamily="Lato, sans-serif"
                   fontWeight={700}
                   fill="#000000"
@@ -625,7 +696,7 @@ export function SociogramGraph({
         <button
           type="button"
           className="h-8 w-8 rounded-md border border-[#0F9B46] bg-white text-sm font-semibold text-[#0F9B46] shadow hover:bg-green-50"
-          onClick={() => setZoom(1)}
+          onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
           aria-label="Reset de zoom"
           title="Reset de zoom"
         >

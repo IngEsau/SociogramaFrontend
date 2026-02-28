@@ -55,16 +55,13 @@ export const LoginView = () => {
     }
 
     try {
-      console.log('✓ Intentando login...');
       await login({
         username: matricula,
         password: password,
         recaptcha_token: recaptchaResponse,
       });
-      console.log('✓ Login exitoso!');
       // La navegación se hace en el useEffect cuando cambie isAuthenticated
-    } catch (err) {
-      console.error('✗ Error de login:', err);
+    } catch {
       resetRecaptcha();
     }
   };

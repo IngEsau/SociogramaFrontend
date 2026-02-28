@@ -35,9 +35,8 @@ export const GuestGuard = ({ children }: GuestGuardProps) => {
       if (localStorage.getItem('access_token') && !user) {
         try {
           await fetchProfile();
-        } catch (error) {
+        } catch {
           // Token inválido, el usuario puede acceder a las rutas de auth
-          console.error('Token inválido:', error);
         }
       }
       setIsChecking(false);

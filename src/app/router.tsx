@@ -72,11 +72,9 @@ export const router = createBrowserRouter([
   {
     path: '/reset-password',
     element: (
-      <GuestGuard>
-        <ResetPasswordGuard>
-          <ResetPasswordView />
-        </ResetPasswordGuard>
-      </GuestGuard>
+      <ResetPasswordGuard>
+        <ResetPasswordView />
+      </ResetPasswordGuard>
     ),
   },
   {

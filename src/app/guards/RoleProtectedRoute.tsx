@@ -23,8 +23,8 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
       if (!user && localStorage.getItem('access_token')) {
         try {
           await fetchProfile();
-        } catch (error) {
-          console.error('Error al verificar autenticación:', error);
+        } catch {
+          // Token inválido o expirado, el interceptor se encargará de redirigir
         }
       }
       setIsChecking(false);

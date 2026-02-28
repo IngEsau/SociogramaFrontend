@@ -90,8 +90,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           await authService.logout();
         } catch {
-          // Ignorar errores de logout
-          console.warn('Error durante logout');
+          // Ignorar errores de logout: la sesión local ya fue limpiada
         } finally {
           set({
             user: null,
@@ -151,9 +150,11 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-storage', // Nombre en localStorage
       partialize: (state) => ({
         // Solo persistir estos campos
+        // requiresPasswordChange NO se persiste: se deriva del servidor en cada login.
+        // Persistirlo abriría una ventana para que un estado residual permita acceder
+        // a /change-password en sesiones donde first_login ya es false.
         user: state.user,
         isAuthenticated: state.isAuthenticated,
-        requiresPasswordChange: state.requiresPasswordChange,
       }),
     }
   )

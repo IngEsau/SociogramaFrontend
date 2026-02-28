@@ -65,6 +65,24 @@ export const StudentFormView = () => {
     return parsed;
   }, [cuestionarioId]);
 
+  // Bloquear cierre/recarga de la pestaña mientras el formulario esté en progreso
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Solo bloquear si no se ha enviado exitosamente y hay al menos una respuesta
+      if (submitSuccess) return;
+
+      const hasAnyAnswer = Object.values(answers).some(
+        (a) => a.firstPlace || a.secondPlace || a.thirdPlace
+      );
+      if (!hasAnyAnswer) return;
+
+      e.preventDefault();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [answers, submitSuccess]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -91,10 +109,12 @@ export const StudentFormView = () => {
           type: 'positive',
         }));
 
-        const mappedStudents: Student[] = response.companeros.map((classmate) => ({
-          id: String(classmate.id),
-          name: `${classmate.nombre} (${classmate.matricula})`,
-        }));
+        const mappedStudents: Student[] = response.companeros
+          .map((classmate) => ({
+            id: String(classmate.id),
+            name: classmate.nombre,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
         const hasUnsupportedQuestion = response.preguntas.some(
           (question) => question.tipo !== 'SELECCION_ALUMNO' || question.max_elecciones !== 3
@@ -226,14 +246,11 @@ export const StudentFormView = () => {
       <div className="w-full min-h-screen flex items-center justify-center bg-white p-4 relative overflow-hidden">
         <DecorativeCircles />
         <div className="relative z-10 flex flex-col items-center gap-4">
-          <SuccessMessage studentName={user?.nombre_completo || ''} />
-          <button
-            type="button"
-            onClick={() => navigate('/student')}
-            className="rounded-lg bg-[#0F7E3C] px-6 py-2.5 text-white font-semibold hover:bg-[#0c6a33] transition-colors"
-          >
-            Volver al panel
-          </button>
+          <SuccessMessage
+            studentName={user?.nombre_completo || ''}
+            redirectSeconds={5}
+            onRedirect={() => navigate('/student')}
+          />
         </div>
       </div>
     );
@@ -265,15 +282,7 @@ export const StudentFormView = () => {
       {/* Contenido principal */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 py-8 sm:py-12 md:py-16 lg:py-20 flex flex-col items-center gap-6 sm:gap-8">
         {/* Header con logos, título e instrucciones */}
-        <SurveyHeader groupName={groupName || questionnaireTitle} />
-
-        {questionnaireTitle && (
-          <div className="w-full max-w-5xl px-2">
-            <p className="text-[#245C52] text-base sm:text-lg md:text-xl font-semibold">
-              Cuestionario: {questionnaireTitle}
-            </p>
-          </div>
-        )}
+        <SurveyHeader groupName={groupName || questionnaireTitle} questionnaireTitle={questionnaireTitle} />
 
         {error && (
           <div className="w-full max-w-5xl rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-red-700 text-sm sm:text-base">

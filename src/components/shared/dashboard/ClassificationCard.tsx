@@ -44,43 +44,41 @@ export function ClassificationCard({
             {title}
           </h3>
           {hasItems && (
-            <p className="text-xs text-gray-400 mt-1 truncate">{subtitle}</p>
+            <div className="flex items-center gap-1 mt-1">
+              <p className="text-xs text-gray-400 truncate">{subtitle}</p>
+              {onFilterClick && (
+                <button
+                  type="button"
+                  onClick={onFilterClick}
+                  title="Seleccionar pregunta"
+                  className="flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-(--verde-utp) transition-colors shrink-0"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="4" y1="6" x2="20" y2="6" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
+                    <line x1="11" y1="18" x2="13" y2="18" />
+                  </svg>
+                </button>
+              )}
+            </div>
           )}
         </div>
 
-        {hasItems && (
-          <div className="flex items-center gap-1 ml-2 shrink-0">
-            {onFilterClick && (
-              <button
-                type="button"
-                onClick={onFilterClick}
-                title="Seleccionar pregunta"
-                className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-(--verde-utp) transition-colors"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <line x1="4" y1="6" x2="20" y2="6" />
-                  <line x1="8" y1="12" x2="16" y2="12" />
-                  <line x1="11" y1="18" x2="13" y2="18" />
-                </svg>
-              </button>
-            )}
-            {onToggleVisibility && (
-              <button
-                type="button"
-                onClick={onToggleVisibility}
-                title={isVisible ? 'Ocultar clasificacion' : 'Mostrar clasificacion'}
-                className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
-              >
-                <img
-                  src={isVisible ? openEyeIcon : closeEyeIcon}
-                  alt=""
-                  width={18}
-                  height={18}
-                  aria-hidden
-                />
-              </button>
-            )}
-          </div>
+        {hasItems && onToggleVisibility && (
+          <button
+            type="button"
+            onClick={onToggleVisibility}
+            title={isVisible ? 'Ocultar clasificacion' : 'Mostrar clasificacion'}
+            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-gray-100 transition-colors ml-2 shrink-0"
+          >
+            <img
+              src={isVisible ? openEyeIcon : closeEyeIcon}
+              alt=""
+              width={18}
+              height={18}
+              aria-hidden
+            />
+          </button>
         )}
       </div>
 

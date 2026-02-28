@@ -33,8 +33,7 @@ export const validateResetTokenService = async (
       { token }
     );
     return response.data;
-  } catch (error) {
-    console.error('Error validando token:', error);
+  } catch {
     return {
       valid: false,
       error: 'Token inválido o expirado',
@@ -55,7 +54,7 @@ export const resetPasswordService = async (
   // return response.data;
 
   // Simulación temporal (solo para propósitos de desarrollo)
-  console.log('Restableciendo contraseña con token:', data.token);
+  void data; // Evitar advertencia de variable no usada
 
   return new Promise((resolve) => {
     setTimeout(() => {

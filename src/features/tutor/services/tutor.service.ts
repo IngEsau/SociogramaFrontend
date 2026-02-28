@@ -8,7 +8,7 @@
 import { api } from '../../../core/api/axios';
 import type { EstadisticasResponse } from '../../sociogram/types';
 import type { Cuestionario } from '../../admin/types';
-import type { RegistroResponse } from '../types';
+import type { RegistroResponse, ClasificacionPreguntaResponse } from '../types';
 
 export interface Group {
   id: number;
@@ -244,6 +244,23 @@ export const tutorService = {
     const response = await api.get<RegistroResponse>(
       `/academic/cuestionarios/${cuestionarioId}/registro/`,
       { params: { grupo_id: grupoId } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Obtener ranking de alumnos por puntaje recibido en una pregunta especifica.
+   * Solo aplica a preguntas de tipo SELECCION_ALUMNO.
+   * GET /api/academic/cuestionarios/{cuestionarioId}/clasificacion-pregunta/?grupo_id={grupoId}&pregunta_id={preguntaId}
+   */
+  async getClasificacionPregunta(
+    cuestionarioId: number,
+    grupoId: number,
+    preguntaId: number
+  ): Promise<ClasificacionPreguntaResponse> {
+    const response = await api.get<ClasificacionPreguntaResponse>(
+      `/academic/cuestionarios/${cuestionarioId}/clasificacion-pregunta/`,
+      { params: { grupo_id: grupoId, pregunta_id: preguntaId } }
     );
     return response.data;
   },

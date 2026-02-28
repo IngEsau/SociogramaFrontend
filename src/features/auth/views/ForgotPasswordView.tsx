@@ -42,7 +42,6 @@ export const ForgotPasswordView = () => {
 
     try {
       setIsLoading(true);
-      console.log('✓ Intentando solicitud de recuperación...');
 
       // TODO: Aquí iría la llamada al servicio de recuperación de contraseña
       // await forgotPasswordService({ email, recaptcha_token: recaptchaResponse });
@@ -50,13 +49,11 @@ export const ForgotPasswordView = () => {
       // Simulación de envío (temporal)
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      console.log('✓ Solicitud de recuperación enviada para:', email);
       setSuccess('Si existe una cuenta con el correo proporcionado, recibirás un enlace de recuperación.');
       setEmail('');
       resetRecaptcha();
 
-    } catch (err) {
-      console.error('✗ Error al solicitar recuperación:', err);
+    } catch {
       setError('Ocurrió un error al procesar tu solicitud. Por favor, intenta nuevamente.');
       resetRecaptcha();
     } finally {

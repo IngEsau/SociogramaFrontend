@@ -9,6 +9,7 @@
  * - 100%: verde con efecto neon
  */
 
+import { useState, useEffect } from 'react';
 import openEyeIcon from '../../../core/assets/open-eye-icon.svg';
 import closeEyeIcon from '../../../core/assets/close-eye-icon.svg';
 
@@ -57,12 +58,28 @@ export function ResponsesProgressCard({
   onToggleVisibility,
   isVisible = true,
 }: ResponsesProgressCardProps) {
+  // displayVisible se retrasa respecto a isVisible para que el blur se aplique
+  // primero y el cambio de valor (0%) ocurra cuando el blur ya cubre el contenido.
+  const [displayVisible, setDisplayVisible] = useState(isVisible);
+
+  useEffect(() => {
+    if (isVisible) {
+      // Al mostrar: esperar a que el fade-in del blur termine antes de restaurar el valor real
+      const id = window.setTimeout(() => setDisplayVisible(true), 280);
+      return () => window.clearTimeout(id);
+    } else {
+      // Al ocultar: cambiar el valor a 0 con un tick mínimo para que React procese
+      // el blur primero (transition-all duration-300 ya cubre la animación)
+      const id = window.setTimeout(() => setDisplayVisible(false), 0);
+      return () => window.clearTimeout(id);
+    }
+  }, [isVisible]);
+
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-  // Cuando no es visible, mostramos 0 para no inferir el porcentaje real
-  const displayPercentage = isVisible ? clamp(percentage, 0, 100) : 0;
+  const displayPercentage = displayVisible ? clamp(percentage, 0, 100) : 0;
   const safePercentage = clamp(percentage, 0, 100);
   const progressAngle = displayPercentage * 3.6;
-  const colors = getProgressColors(isVisible ? safePercentage : 0);
+  const colors = getProgressColors(displayVisible ? safePercentage : 0);
 
   const noResponses = completed === 0;
   const hasData = total > 0 && completed > 0;
@@ -99,7 +116,15 @@ export function ResponsesProgressCard({
             ...(colors.glow && isVisible ? {
               boxShadow: `0 0 18px 4px rgba(15, 126, 60, 0.35), 0 0 40px 8px rgba(15, 126, 60, 0.15)`,
             } : {}),
-            ...(!isVisible ? { filter: 'blur(7px)', userSelect: 'none', pointerEvents: 'none' } : {}),
+            ...(!isVisible ? {
+              filter: 'blur(7px)',
+              userSelect: 'none',
+              pointerEvents: 'none',
+              transition: 'filter 0.3s ease, background 0.3s ease',
+            } : {
+              filter: 'blur(0px)',
+              transition: 'filter 0.3s ease, background 0.3s ease',
+            }),
           }}
         >
           <div

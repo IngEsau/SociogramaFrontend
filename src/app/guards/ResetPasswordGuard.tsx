@@ -1,12 +1,15 @@
 /**
  * Guard para la ruta de restablecimiento de contraseña
- * Valida que el token sea válido antes de permitir el acceso
+ * Valida que el token sea válido antes de permitir el acceso.
+ * Si el usuario tiene sesión activa, la cierra primero para que pueda
+ * usar el enlace del correo sin importar si está logueado o no.
  */
 
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams, useNavigate } from 'react-router-dom';
 import { validateResetTokenService } from '../../features/auth/services';
 import { useToastStore } from '../../store';
+import { useAuthStore } from '../../store';
 
 interface ResetPasswordGuardProps {
   children: React.ReactNode;
@@ -19,15 +22,32 @@ export const ResetPasswordGuard = ({ children }: ResetPasswordGuardProps) => {
   const [isValidating, setIsValidating] = useState(true);
   const [isValid, setIsValid] = useState(false);
   const { showToast, hideToast } = useToastStore();
+  const { isAuthenticated, logout } = useAuthStore();
 
   useEffect(() => {
     const validateToken = async () => {
-      // Si no hay token en la URL, redirigir al login sin mostrar toast
-      // La ruta está bloqueada y solo se desbloquea con un token válido
+      // Si no hay token en la URL, mostrar aviso y redirigir al login
       if (!token) {
+        showToast({
+          message: 'Enlace de recuperación no válido.\nSolicita un nuevo enlace desde la pantalla de olvide mi contraseña.',
+          type: 'warning',
+          action: {
+            label: 'Solicitar nuevo enlace',
+            onClick: () => {
+              hideToast();
+              navigate('/forgot-password');
+            },
+          },
+        });
         setIsValidating(false);
         setIsValid(false);
         return;
+      }
+
+      // Si hay sesión activa, cerrarla silenciosamente antes de validar el token.
+      // El enlace del correo debe funcionar sin importar el estado de sesión.
+      if (isAuthenticated) {
+        await logout();
       }
 
       try {
@@ -49,8 +69,7 @@ export const ResetPasswordGuard = ({ children }: ResetPasswordGuardProps) => {
           });
           setIsValid(false);
         }
-      } catch (error) {
-        console.error('Error al validar token:', error);
+      } catch {
         showToast({
           message: 'Ocurrió un error al verificar tu solicitud.\nPor favor, intenta solicitar un nuevo enlace.',
           type: 'error',
@@ -69,7 +88,10 @@ export const ResetPasswordGuard = ({ children }: ResetPasswordGuardProps) => {
     };
 
     validateToken();
-  }, [token, showToast, hideToast, navigate]);
+  // showToast, hideToast y navigate son referencias estables (Zustand + React Router)
+  // que no cambian entre renders, por lo que no causan re-ejecuciones inesperadas.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   // Mientras valida, mostrar pantalla de carga
   if (isValidating) {

@@ -48,25 +48,29 @@ export function SociogramLegend({ className = '' }: SociogramLegendProps) {
 
       <div className="space-y-3 text-xs text-gray-700">
         <div className="flex items-center gap-3">
-          <span className="h-8 w-8 rounded-full border border-dashed border-black/35 bg-white/70" />
+          <span className="flex h-8 w-8 items-center justify-center shrink-0">
+            <span className="h-8 w-8 rounded-full border border-dashed border-black/35 bg-white/70" />
+          </span>
           <span>+ Impacto</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="h-5 w-5 rounded-full border border-dashed border-black/35 bg-white/70" />
+          <span className="flex h-8 w-8 items-center justify-center shrink-0">
+            <span className="h-5 w-5 rounded-full border border-dashed border-black/35 bg-white/70" />
+          </span>
           <span>- Impacto</span>
         </div>
         <div className="flex items-center gap-3">
           <svg width="56" height="10" viewBox="0 0 56 10" fill="none" aria-hidden>
-            <path d="M1 5H55" stroke="#202328" strokeWidth="1.5" />
-            <path d="M7 2L1 5L7 8" stroke="#202328" strokeWidth="1.5" />
-            <path d="M49 2L55 5L49 8" stroke="#202328" strokeWidth="1.5" />
+            <path d="M1 5H55" stroke="#1A1A1A" strokeWidth="1.5" />
+            <path d="M7 2L1 5L7 8" stroke="#1A1A1A" strokeWidth="1.5" />
+            <path d="M49 2L55 5L49 8" stroke="#1A1A1A" strokeWidth="1.5" />
           </svg>
           <span>Conexiones fuertes</span>
         </div>
         <div className="flex items-center gap-3">
           <svg width="56" height="10" viewBox="0 0 56 10" fill="none" aria-hidden>
-            <path d="M1 5H55" stroke="#202328" strokeWidth="1.5" strokeDasharray="4 2" />
-            <path d="M49 2L55 5L49 8" stroke="#202328" strokeWidth="1.5" />
+            <path d="M1 5H55" stroke="#1A1A1A" strokeWidth="1.5" />
+            <path d="M49 2L55 5L49 8" stroke="#1A1A1A" strokeWidth="1.5" />
           </svg>
           <span>Conexiones debiles</span>
         </div>

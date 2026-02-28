@@ -2109,48 +2109,48 @@ function PeriodoSelector({ periodos, selectedId, periodoActivo, onChange }: Peri
 // Vista de Previsualizacion (estilo Figma real)
 // ==========================================
 
-/** 40 alumnos ficticios para la previsualizacion */
+/** 40 alumnos ficticios para la previsualizacion (ordenados alfabéticamente) */
 const PREVIEW_STUDENTS: Student[] = [
-  { id: '1', name: 'Jesus Aguilar Perez Osorno' },
+  { id: '24', name: 'Alejandro David Castro Ramos' },
+  { id: '16', name: 'Andres Felipe Munoz Castillo' },
   { id: '2', name: 'Ana Maria Martinez Sanchez' },
+  { id: '23', name: 'Andrea Carolina Gutierrez Leon' },
   { id: '3', name: 'Carlos Eduardo Ramirez Lopez' },
-  { id: '4', name: 'Luis Fernando Hernandez Garcia' },
-  { id: '5', name: 'Maria Guadalupe Gonzalez Torres' },
-  { id: '6', name: 'Pedro Antonio Lopez Ramirez' },
-  { id: '7', name: 'Sofia Isabella Diaz Morales' },
+  { id: '11', name: 'Carmen Elena Rodriguez Silva' },
+  { id: '27', name: 'Carolina Victoria Vazquez Salazar' },
+  { id: '21', name: 'Daniela Sofia Medina Aguilar' },
+  { id: '33', name: 'Diana Marcela Soto Villanueva' },
+  { id: '18', name: 'Diego Armando Vargas Herrera' },
+  { id: '36', name: 'Eduardo Jose Estrada Pineda' },
+  { id: '26', name: 'Emilio Sebastian Pena Carrillo' },
+  { id: '14', name: 'Fernando Javier Alvarez Rojas' },
+  { id: '17', name: 'Gabriela Alejandra Cruz Mendoza' },
+  { id: '34', name: 'Hector Manuel Rios Sandoval' },
+  { id: '15', name: 'Isabel Cristina Romero Navarro' },
+  { id: '22', name: 'Javier Enrique Molina Rios' },
+  { id: '1', name: 'Jesus Aguilar Perez Osorno' },
+  { id: '40', name: 'Jorge Luis Acosta Velazquez' },
   { id: '8', name: 'Jose Manuel Garcia Ruiz' },
   { id: '9', name: 'Laura Patricia Fernandez Castro' },
-  { id: '10', name: 'Miguel Angel Sanchez Perez' },
-  { id: '11', name: 'Carmen Elena Rodriguez Silva' },
-  { id: '12', name: 'Roberto Carlos Jimenez Ortiz' },
-  { id: '13', name: 'Patricia Lorena Torres Vega' },
-  { id: '14', name: 'Fernando Javier Alvarez Rojas' },
-  { id: '15', name: 'Isabel Cristina Romero Navarro' },
-  { id: '16', name: 'Andres Felipe Munoz Castillo' },
-  { id: '17', name: 'Gabriela Alejandra Cruz Mendoza' },
-  { id: '18', name: 'Diego Armando Vargas Herrera' },
-  { id: '19', name: 'Valentina Maria Reyes Campos' },
-  { id: '20', name: 'Ricardo Alberto Flores Guerrero' },
-  { id: '21', name: 'Daniela Sofia Medina Aguilar' },
-  { id: '22', name: 'Javier Enrique Molina Rios' },
-  { id: '23', name: 'Andrea Carolina Gutierrez Leon' },
-  { id: '24', name: 'Alejandro David Castro Ramos' },
-  { id: '25', name: 'Natalia Fernanda Ortiz Delgado' },
-  { id: '26', name: 'Emilio Sebastian Pena Carrillo' },
-  { id: '27', name: 'Carolina Victoria Vazquez Salazar' },
-  { id: '28', name: 'Sergio Ivan Mendez Cortes' },
-  { id: '29', name: 'Paola Andrea Ruiz Montero' },
-  { id: '30', name: 'Raul Eduardo Dominguez Paredes' },
   { id: '31', name: 'Lucia Fernanda Herrera Espinoza' },
-  { id: '32', name: 'Omar Alejandro Moreno Fuentes' },
-  { id: '33', name: 'Diana Marcela Soto Villanueva' },
-  { id: '34', name: 'Hector Manuel Rios Sandoval' },
-  { id: '35', name: 'Monica Patricia Duran Cabrera' },
-  { id: '36', name: 'Eduardo Jose Estrada Pineda' },
-  { id: '37', name: 'Rosa Maria Juarez Contreras' },
-  { id: '38', name: 'Victor Hugo Cervantes Ibarra' },
+  { id: '4', name: 'Luis Fernando Hernandez Garcia' },
+  { id: '5', name: 'Maria Guadalupe Gonzalez Torres' },
   { id: '39', name: 'Mariana Isabela Lara Montes' },
-  { id: '40', name: 'Jorge Luis Acosta Velazquez' },
+  { id: '10', name: 'Miguel Angel Sanchez Perez' },
+  { id: '35', name: 'Monica Patricia Duran Cabrera' },
+  { id: '25', name: 'Natalia Fernanda Ortiz Delgado' },
+  { id: '32', name: 'Omar Alejandro Moreno Fuentes' },
+  { id: '29', name: 'Paola Andrea Ruiz Montero' },
+  { id: '13', name: 'Patricia Lorena Torres Vega' },
+  { id: '6', name: 'Pedro Antonio Lopez Ramirez' },
+  { id: '30', name: 'Raul Eduardo Dominguez Paredes' },
+  { id: '20', name: 'Ricardo Alberto Flores Guerrero' },
+  { id: '12', name: 'Roberto Carlos Jimenez Ortiz' },
+  { id: '37', name: 'Rosa Maria Juarez Contreras' },
+  { id: '28', name: 'Sergio Ivan Mendez Cortes' },
+  { id: '7', name: 'Sofia Isabella Diaz Morales' },
+  { id: '19', name: 'Valentina Maria Reyes Campos' },
+  { id: '38', name: 'Victor Hugo Cervantes Ibarra' },
 ];
 
 interface PreviewViewProps {
@@ -2221,7 +2221,7 @@ function PreviewView({ cuestionario, onBack }: PreviewViewProps) {
           {/* Contenido principal */}
           <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 py-8 sm:py-12 md:py-16 lg:py-20 flex flex-col items-center gap-6 sm:gap-8">
             {/* Header con logos, titulo e instrucciones */}
-            <SurveyHeader groupName="10ºA" />
+            <SurveyHeader groupName="10ºA" questionnaireTitle={cuestionario.titulo} />
 
             {/* Formulario con preguntas - si hay preguntas */}
             {questions.length > 0 ? (

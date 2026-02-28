@@ -25,12 +25,14 @@ export const StudentSelector = ({
   disabled = false,
 }: StudentSelectorProps) => {
   // Filtrar estudiantes que ya fueron seleccionados en otros lugares y el estudiante actual
-  const availableStudents = students.filter(
-    (student) => 
-      !excludeIds.includes(student.id) && 
-      student.id !== currentStudentId &&
-      student.id !== value
-  );
+  const availableStudents = students
+    .filter(
+      (student) => 
+        !excludeIds.includes(student.id) && 
+        student.id !== currentStudentId &&
+        student.id !== value
+    )
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
   // Incluir el estudiante actualmente seleccionado en las opciones
   const selectedStudent = students.find((s) => s.id === value);

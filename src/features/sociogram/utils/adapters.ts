@@ -94,16 +94,15 @@ function normalizeNodeSize(impacto: number, maxImpacto: number): number {
 /**
  * Filtra y construye las aristas del grafo aplicando las reglas del sociograma:
  *
- * 1. Cada alumno tiene maximo MAX_OUTGOING_EDGES flechas de salida (elecciones positivas).
+ * 1. Solo se grafican conexiones POSITIVAS. Las negativas se usan para metricas.
+ * 2. Cada alumno tiene maximo MAX_OUTGOING_EDGES flechas de salida (elecciones positivas).
  *    Se toman las de mayor peso siempre que el peso >= 33% de la suma total positiva del origen.
- * 2. Las conexiones negativas (rechazos) tambien se limitan a MAX_OUTGOING_EDGES de salida.
  * 3. Si A -> B y B -> A en positivo, se consolida en una unica arista reciproca (doble punta = conexion fuerte).
  *    Si solo uno apunta al otro, es conexion debil (una punta).
  */
 function filterAndBuildGraphEdges(conexiones: SociogramConexion[]): GraphEdge[] {
-  // Separar positivas y negativas
+  // Separar positivas (las negativas se usan solo para metricas, no se grafican)
   const positivas = conexiones.filter((c) => c.polaridad === 'POSITIVA');
-  const negativas = conexiones.filter((c) => c.polaridad === 'NEGATIVA');
 
   // --- Procesar conexiones positivas ---
 
@@ -176,40 +175,9 @@ function filterAndBuildGraphEdges(conexiones: SociogramConexion[]): GraphEdge[] 
     }
   });
 
-  // --- Procesar conexiones negativas (rechazos) ---
-  // Tambien se limitan: top MAX_OUTGOING_EDGES por origen segun peso
-  const totalNegativoPorOrigen = new Map<number, number>();
-  negativas.forEach((c) => {
-    totalNegativoPorOrigen.set(
-      c.origen_id,
-      (totalNegativoPorOrigen.get(c.origen_id) ?? 0) + c.peso
-    );
-  });
-
-  const edgesNegativos: GraphEdge[] = [];
-  const origenesNegativos = new Set(negativas.map((c) => c.origen_id));
-
-  origenesNegativos.forEach((origenId) => {
-    const totalPeso = totalNegativoPorOrigen.get(origenId) ?? 0;
-    const umbral = totalPeso * MIN_WEIGHT_RATIO;
-
-    negativas
-      .filter((c) => c.origen_id === origenId && c.peso >= umbral)
-      .sort((a, b) => b.peso - a.peso)
-      .slice(0, MAX_OUTGOING_EDGES)
-      .forEach((c) => {
-        edgesNegativos.push({
-          id: `${c.origen_id}-${c.destino_id}-neg`,
-          source: c.origen_id,
-          target: c.destino_id,
-          type: 'rechazo',
-          reciproco: false,
-          weight: c.peso,
-        });
-      });
-  });
-
-  return [...edgesPositivosFinales, ...edgesNegativos];
+  // Solo se muestran conexiones positivas en el grafo.
+  // Las negativas se usan para metricas pero no se dibujan.
+  return edgesPositivosFinales;
 }
 
 export function mapGrupoEstadisticasToSociogramData(
@@ -220,7 +188,8 @@ export function mapGrupoEstadisticasToSociogramData(
 
   const nodes: GraphNode[] = grupo.nodos.map((nodo, index) => ({
     id: nodo.alumno_id,
-    label: String(index + 1),
+    label: String(nodo.numero_lista ?? index + 1),
+    numeroLista: nodo.numero_lista ?? index + 1,
     matricula: nodo.matricula,
     nombre: nodo.nombre,
     size: normalizeNodeSize(nodo.impacto_total, maxImpacto),

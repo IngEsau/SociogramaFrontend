@@ -64,7 +64,6 @@ export const ResetPasswordView = () => {
 
     try {
       setIsLoading(true);
-      console.log('Intentando restablecer contraseña...');
 
       // TODO: Aquí iría la llamada al servicio de restablecimiento de contraseña
       // await resetPasswordService({ token, password });
@@ -72,15 +71,14 @@ export const ResetPasswordView = () => {
       // Simulación de envío (temporal)
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      console.log('✓ Contraseña restablecida exitosamente');
       setSuccess('Contraseña restablecida exitosamente.');
 
       // Limpiar campos
       setPassword('');
       setConfirmPassword('');
 
-    } catch (err) {
-      console.error('✗ Error al restablecer contraseña:', err);
+    } catch {
+      setError('Ocurrió un error al restablecer tu contraseña. Por favor, intenta nuevamente.');
       setError('Ocurrió un error al restablecer tu contraseña. Por favor, intenta nuevamente.');
     } finally {
       setIsLoading(false);
