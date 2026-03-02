@@ -41,6 +41,11 @@ interface CommitteeDashboardViewProps {
   mode?: CommitteeViewMode;
 }
 
+interface FilterOption {
+  id: number;
+  label: string;
+}
+
 function extractErrorMessage(error: unknown, fallback: string): string {
   if (error && typeof error === 'object' && 'response' in error) {
     const axiosError = error as { response?: { data?: Record<string, unknown> } };
@@ -222,6 +227,53 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
     }));
   }, [questionnaireProgress, questionnaireStats]);
 
+  const divisionOptions = useMemo<FilterOption[]>(() => {
+    const map = new Map<number, string>();
+
+    (overviewAlerts?.alertas_aislados.por_division ?? []).forEach((division) => {
+      if (division.division_id === null || division.division_id <= 0) return;
+      map.set(division.division_id, division.division || `Division ${division.division_id}`);
+    });
+
+    (overviewCentrality?.top_centralidad.por_division ?? []).forEach((division) => {
+      if (division.division_id === null || division.division_id <= 0) return;
+      if (!map.has(division.division_id)) {
+        map.set(division.division_id, division.division || `Division ${division.division_id}`);
+      }
+    });
+
+    if (selectedDivisionId && !map.has(selectedDivisionId)) {
+      map.set(selectedDivisionId, `Division ${selectedDivisionId}`);
+    }
+
+    return Array.from(map.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [overviewAlerts, overviewCentrality, selectedDivisionId]);
+
+  const tutorOptions = useMemo<FilterOption[]>(() => {
+    const map = new Map<number, string>();
+
+    const addTutor = (tutorId?: number | null, tutorName?: string | null) => {
+      if (!tutorId || tutorId <= 0) return;
+      const safeName = typeof tutorName === 'string' ? tutorName.trim() : '';
+      const label = safeName.length > 0 ? safeName : `Tutor ${tutorId}`;
+      if (!map.has(tutorId)) map.set(tutorId, label);
+    };
+
+    (questionnaireProgress?.grupos ?? []).forEach((group) => addTutor(group.tutor_id, group.tutor));
+    (questionnaireStats?.grupos ?? []).forEach((group) => addTutor(group.tutor_id, group.tutor));
+    (graphs?.distribucion_por_grupo ?? []).forEach((group) => addTutor(group.tutor_id, group.tutor));
+
+    if (selectedTutorId && !map.has(selectedTutorId)) {
+      map.set(selectedTutorId, `Tutor ${selectedTutorId}`);
+    }
+
+    return Array.from(map.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [graphs, questionnaireProgress, questionnaireStats, selectedTutorId]);
+
   const selectedStatsGroup = useMemo<CommitteeQuestionnaireStatsGroup | null>(() => {
     const groups = questionnaireStats?.grupos ?? [];
     if (groups.length === 0) return null;
@@ -402,6 +454,14 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
     void loadCommitteeData();
   }, [loadCommitteeData, selectedQuestionnaireId]);
 
+  useEffect(() => {
+    setDraftDivisionId(selectedDivisionId ? String(selectedDivisionId) : '');
+  }, [selectedDivisionId]);
+
+  useEffect(() => {
+    setDraftTutorId(selectedTutorId ? String(selectedTutorId) : '');
+  }, [selectedTutorId]);
+
   const handleRefresh = useCallback(() => {
     void loadCommitteeData(true);
   }, [loadCommitteeData]);
@@ -514,21 +574,45 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
           ))}
         </select>
 
-        <input
+        <select
           value={draftDivisionId}
           onChange={(event) => setDraftDivisionId(event.target.value)}
-          className="w-34 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm"
-          placeholder="division_id"
-          inputMode="numeric"
-        />
+          className="min-w-56 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm"
+          disabled={divisionOptions.length === 0}
+          aria-label="Filtrar por division"
+        >
+          <option value="">{divisionOptions.length === 0 ? 'Sin divisiones disponibles' : 'Todas las divisiones'}</option>
+          {divisionOptions.map((division) => (
+            <option key={division.id} value={division.id}>
+              {division.label}
+            </option>
+          ))}
+        </select>
 
-        <input
-          value={draftTutorId}
-          onChange={(event) => setDraftTutorId(event.target.value)}
-          className="w-30 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm"
-          placeholder="tutor_id"
-          inputMode="numeric"
-        />
+        {tutorOptions.length > 0 ? (
+          <select
+            value={draftTutorId}
+            onChange={(event) => setDraftTutorId(event.target.value)}
+            className="min-w-56 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm"
+            aria-label="Filtrar por tutor"
+          >
+            <option value="">Todos los tutores</option>
+            {tutorOptions.map((tutor) => (
+              <option key={tutor.id} value={tutor.id}>
+                {tutor.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            value={draftTutorId}
+            onChange={(event) => setDraftTutorId(event.target.value)}
+            className="w-40 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm"
+            placeholder="Tutor (ID)"
+            inputMode="numeric"
+            title="El backend de Comite no expone catalogo de tutores; usa el ID del tutor."
+          />
+        )}
 
         <button
           type="button"
@@ -560,6 +644,7 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
     [
       draftDivisionId,
       draftTutorId,
+      divisionOptions,
       groupOptions,
       handleApplyAdvancedFilters,
       handleClearAdvancedFilters,
@@ -573,6 +658,7 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
       selectedPeriodId,
       selectedGroupId,
       selectedQuestionnaireId,
+      tutorOptions,
     ]
   );
 
@@ -598,15 +684,30 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
       const period = periodOptions.find((item) => item.id === selectedPeriodId);
       chips.push(`Periodo: ${period?.label ?? selectedPeriodId}`);
     }
-    if (selectedDivisionId) chips.push(`division_id: ${selectedDivisionId}`);
-    if (selectedTutorId) chips.push(`tutor_id: ${selectedTutorId}`);
+    if (selectedDivisionId) {
+      const division = divisionOptions.find((item) => item.id === selectedDivisionId);
+      chips.push(`Division: ${division?.label ?? `ID ${selectedDivisionId}`}`);
+    }
+    if (selectedTutorId) {
+      const tutor = tutorOptions.find((item) => item.id === selectedTutorId);
+      chips.push(`Tutor: ${tutor?.label ?? `ID ${selectedTutorId}`}`);
+    }
     if (selectedGroupId) {
       const group = groupOptions.find((item) => item.id === selectedGroupId);
       chips.push(`Grupo: ${group?.label ?? selectedGroupId}`);
     }
 
     return chips;
-  }, [groupOptions, periodOptions, selectedDivisionId, selectedGroupId, selectedPeriodId, selectedTutorId]);
+  }, [
+    divisionOptions,
+    groupOptions,
+    periodOptions,
+    selectedDivisionId,
+    selectedGroupId,
+    selectedPeriodId,
+    selectedTutorId,
+    tutorOptions,
+  ]);
 
   const isStandaloneView = mode !== 'full';
   const headerByMode: Record<Exclude<CommitteeViewMode, 'full'>, { title: string; subtitle: string }> = {

@@ -180,6 +180,8 @@ export interface CommitteeGraphDistributionItem {
   grupo_clave: string;
   division: string | null;
   programa: string | null;
+  tutor_id?: number | null;
+  tutor?: string | null;
   ACEPTADO: number;
   RECHAZADO: number;
   INVISIBLE: number;
@@ -198,6 +200,8 @@ export interface CommitteeQuestionnaireProgressGroup {
   grupo_clave: string;
   division: string | null;
   programa: string | null;
+  tutor_id?: number | null;
+  tutor?: string | null;
   total_alumnos: number;
   completados: number;
   en_progreso: number;
@@ -219,6 +223,8 @@ export interface CommitteeQuestionnaireStatsGroup {
   grupo_clave: string;
   division: string | null;
   programa: string | null;
+  tutor_id?: number | null;
+  tutor?: string | null;
   total_alumnos: number;
   respuestas_completas: number;
   nodos: SociogramNodo[];
