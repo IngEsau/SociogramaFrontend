@@ -12,13 +12,10 @@ import type { UserResponse } from '../types/api.types';
 // ============================================
 
 /**
- * ⚠️ COMITÉ: Rol en revisión
- *
- * El rol de COMITE está semi-confirmado. Puede que se fusione con ADMIN.
- * Si COMMITTEE_ROLE_ENABLED = false, los usuarios con rol COMITE
- * serán tratados como ADMIN.
+ * Habilita rutas y navegación exclusivas para el rol COMITE.
+ * Se deja activo porque el backend ya expone endpoints /api/comite/* en producción.
  */
-export const COMMITTEE_ROLE_ENABLED = false; // Cambiar a true cuando se confirme el rol
+export const COMMITTEE_ROLE_ENABLED = true;
 
 // Roles de la aplicación (normalizados)
 export type AppRole = 'ADMIN' | 'DOCENTE' | 'ALUMNO' | 'COMITE';

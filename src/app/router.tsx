@@ -28,7 +28,7 @@ import { SettingsView } from '../features/settings';
 
 // COMITÉ: Rol en revisión - puede fusionarse con ADMIN
 // Importar solo si COMMITTEE_ROLE_ENABLED = true en roleRouting.ts
-import { CommitteeDashboardView } from '../features/committee';
+import { CommitteeGlobalGraphView, CommitteePanelView, CommitteeQuestionnairesView } from '../features/committee';
 import { COMMITTEE_ROLE_ENABLED } from '../core/routing';
 
 // Common views
@@ -129,12 +129,11 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
     children: [
-      { index: true, element: <TutorDashboardView /> },
-      { path: 'settings', element: <SettingsView /> },
       { index: true, element: <TutorPanelView /> },
       { path: 'dashboard', element: <TutorDashboardView /> },
       { path: 'archivos', element: <TutorArchivosView /> },
       { path: 'activity', element: <TutorActivityView /> },
+      { path: 'settings', element: <SettingsView /> },
       // Aquí irán más rutas de tutor:
       // { path: 'assign', element: <AssignSociogram /> },
       // { path: 'reports', element: <ReportsList /> },
@@ -174,10 +173,10 @@ export const router = createBrowserRouter([
             </RoleProtectedRoute>
           ),
           children: [
-            { index: true, element: <CommitteeDashboardView /> },
+            { index: true, element: <CommitteePanelView /> },
+            { path: 'cuestionarios', element: <CommitteeQuestionnairesView /> },
+            { path: 'grafo-global', element: <CommitteeGlobalGraphView /> },
             { path: 'settings', element: <SettingsView /> },
-            // Aquí irán más rutas de comité:
-            // { path: 'supervision', element: <GlobalSociograms /> },
           ],
         },
       ]
