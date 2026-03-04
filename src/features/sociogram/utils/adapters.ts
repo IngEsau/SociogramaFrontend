@@ -12,6 +12,7 @@ import type {
   SociogramMetadata,
   SociogramNodo,
 } from '../types';
+import { formatNombreDisplay } from '../../../core/utils/nameFormat';
 
 const MIN_NODE_SIZE = 18;
 const MAX_NODE_SIZE = 82;
@@ -191,7 +192,7 @@ export function mapGrupoEstadisticasToSociogramData(
     label: String(nodo.numero_lista ?? index + 1),
     numeroLista: nodo.numero_lista ?? index + 1,
     matricula: nodo.matricula,
-    nombre: nodo.nombre,
+    nombre: formatNombreDisplay(nodo.nombre),
     size: normalizeNodeSize(nodo.impacto_total, maxImpacto),
     color: colorFromPuntaje(nodo, maxImpacto),
     puntosPositivos: nodo.puntos_positivos,

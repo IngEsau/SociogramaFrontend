@@ -24,6 +24,7 @@ import { tutorService } from '../services';
 import type { SociogramGrupoEstadisticas, EstadisticasResponse } from '../../sociogram/types';
 import type { RegistroResponse, ClasificacionPreguntaResponse } from '../types';
 import type { CuestionarioPregunta } from '../../admin/types';
+import { formatNombreDisplay } from '../../../core/utils/nameFormat';
 import CastorBN from '../../../core/assets/Castor1-BN.png';
 
 const EMPTY_GROUPS: SociogramGrupoEstadisticas[] = [];
@@ -282,9 +283,9 @@ export function TutorPanelView() {
     // Prioridad: datos de clasificacion por pregunta
     if (clasificacionData) {
       return clasificacionData.ranking.map((item) => ({
-        name: item.nombre,
+        name: formatNombreDisplay(item.nombre),
         score: item.puntaje_recibido,
-        id: `#${item.numero_lista} · ${item.matricula}`,
+        id: item.matricula,
       }));
     }
     // Fallback: impacto total general
@@ -293,7 +294,7 @@ export function TutorPanelView() {
       .sort((a, b) => b.impacto_total - a.impacto_total)
       .slice(0, 18)
       .map((nodo) => ({
-        name: nodo.nombre,
+        name: formatNombreDisplay(nodo.nombre),
         score: nodo.impacto_total,
         id: nodo.matricula,
       }));
@@ -308,7 +309,7 @@ export function TutorPanelView() {
           const startDate = formatActivityDateTime(alumno.fecha_inicio);
           const endDate = formatActivityDateTime(alumno.fecha_completado);
           return {
-            name: alumno.nombre,
+            name: formatNombreDisplay(alumno.nombre),
             action: alumno.estado === 'COMPLETADO'
               ? 'ha finalizado el formulario.'
               : 'ha comenzado a realizar el formulario.',
@@ -341,7 +342,7 @@ export function TutorPanelView() {
         const endDate = formatActivityDateTime(nodo.fecha_completado);
 
         return {
-          name: nodo.nombre,
+          name: formatNombreDisplay(nodo.nombre),
           action: nodo.completo ? 'ha finalizado el formulario.' : 'ha comenzado a realizar el formulario.',
           time: startDate || endDate || 'Fecha no disponible',
           startDate: startDate ?? undefined,
@@ -486,7 +487,9 @@ export function TutorPanelView() {
     return () => { isCancelled = true; };
   }, [selectedCuestionarioId, selectedGrupoId]);
 
-  // Cargar preguntas del cuestionario activo para el selector de clasificacion
+  // Cargar preguntas del cuestionario seleccionado para el selector de clasificacion.
+  // Se usa getCuestionarioDetalle (por ID) en lugar de getCuestionarioActivo para que
+  // las preguntas sigan disponibles aunque la fecha limite del cuestionario ya haya pasado.
   useEffect(() => {
     if (!selectedCuestionarioId) {
       setPreguntasDisponibles([]);
@@ -498,7 +501,7 @@ export function TutorPanelView() {
 
     const fetchPreguntas = async () => {
       try {
-        const cuestionario = await tutorService.getCuestionarioActivo();
+        const cuestionario = await tutorService.getCuestionarioDetalle(selectedCuestionarioId);
         if (!isCancelled && cuestionario?.preguntas) {
           setPreguntasDisponibles(cuestionario.preguntas);
           // Seleccionar la primera pregunta automaticamente
@@ -561,13 +564,19 @@ export function TutorPanelView() {
     });
   }, [groupOptions]);
 
-  // Ciclar entre preguntas al hacer clic en el filtro de la clasificacion
-  const handleCiclarPregunta = useCallback(() => {
-    if (preguntasDisponibles.length === 0) return;
-    setSelectedPreguntaId((current) => {
-      const idx = preguntasDisponibles.findIndex((cp) => cp.pregunta.id === current);
-      const next = (idx + 1) % preguntasDisponibles.length;
-      return preguntasDisponibles[next].pregunta.id;
+  // Seleccionar pregunta desde el dropdown de la clasificacion
+  const handlePreguntaChange = useCallback((preguntaId: number) => {
+    setSelectedPreguntaId(preguntaId);
+  }, []);
+
+  // Opciones de preguntas para el selector de clasificacion
+  const preguntaOptions = useMemo(() => {
+    return preguntasDisponibles.map((cp) => {
+      const polaridadLabel = cp.pregunta.polaridad === 'NEGATIVA' ? '(-) ' : '(+) ';
+      return {
+        id: cp.pregunta.id,
+        label: `${polaridadLabel}${cp.pregunta.texto}`,
+      };
     });
   }, [preguntasDisponibles]);
 
@@ -718,7 +727,9 @@ export function TutorPanelView() {
             items={noResponses || isLoadingClasificacion ? undefined : classificationItems}
             subtitle={classificationSubtitle}
             emptyMessage={isLoadingClasificacion ? 'Cargando clasificacion...' : emptyMessage}
-            onFilterClick={noResponses || preguntasDisponibles.length <= 1 ? undefined : handleCiclarPregunta}
+            preguntaOptions={noResponses || preguntasDisponibles.length <= 1 ? undefined : preguntaOptions}
+            selectedPreguntaId={selectedPreguntaId}
+            onPreguntaChange={handlePreguntaChange}
             onToggleVisibility={noResponses ? undefined : () => setIsClassificationVisible((prev) => !prev)}
             isVisible={isClassificationVisible}
           />
@@ -745,7 +756,9 @@ export function TutorPanelView() {
           items={noResponses || isLoadingClasificacion ? undefined : classificationItems}
           subtitle={classificationSubtitle}
           emptyMessage={isLoadingClasificacion ? 'Cargando clasificacion...' : emptyMessage}
-          onFilterClick={noResponses || preguntasDisponibles.length <= 1 ? undefined : handleCiclarPregunta}
+          preguntaOptions={noResponses || preguntasDisponibles.length <= 1 ? undefined : preguntaOptions}
+          selectedPreguntaId={selectedPreguntaId}
+          onPreguntaChange={handlePreguntaChange}
           onToggleVisibility={noResponses ? undefined : () => setIsClassificationVisible((prev) => !prev)}
           isVisible={isClassificationVisible}
         />

@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, Search, Eye, ArrowLeft, Users, FileText, Calendar, Clock } from 'lucide-react';
+import { Loader2, Search, Eye, ArrowLeft, Users, FileText, Calendar, Clock, RefreshCw } from 'lucide-react';
 import { useTopbarStore, useToastStore } from '../../../store';
 import { tutorService } from '../services';
 import type { TutorStudent, TutorGroupSummary } from '../services/tutor.service';
@@ -31,7 +31,7 @@ import CastorBN from '../../../core/assets/Castor1-BN.png';
 // Tipos locales
 // ==========================================
 
-type SortMode = 'numero_lista' | 'name' | 'group';
+type SortMode = 'name' | 'group';
 
 // ==========================================
 // Utilidades
@@ -245,7 +245,7 @@ export function TutorActivityView() {
   const [isLoadingCuestionario, setIsLoadingCuestionario] = useState(true);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortMode, setSortMode] = useState<SortMode>('numero_lista');
+  const [sortMode, setSortMode] = useState<SortMode>('name');
   const [showPreview, setShowPreview] = useState(false);
 
   const { setTopbarConfig, resetTopbar } = useTopbarStore();
@@ -282,6 +282,12 @@ export function TutorActivityView() {
       setIsLoadingStudents(false);
     }
   }, [showToast]);
+
+  // Recargar todos los datos de la vista
+  const handleReload = useCallback(() => {
+    fetchCuestionarioActivo();
+    fetchStudents();
+  }, [fetchCuestionarioActivo, fetchStudents]);
 
   useEffect(() => {
     fetchCuestionarioActivo();
@@ -320,23 +326,35 @@ export function TutorActivityView() {
     return () => { isCancelled = true; };
   }, [cuestionarioActivo, selectedGroupId]);
 
-  // Topbar: solo boton de previsualizar
+  // Topbar: boton de refrescar y, si hay cuestionario activo, boton de previsualizar
   useEffect(() => {
     setTopbarConfig({
       hideDefaultSelectors: true,
-      customContent: cuestionarioActivo ? (
-        <button
-          onClick={() => setShowPreview(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-400/50 shadow-sm
-                     text-gray-500 font-bold font-lato text-sm hover:bg-gray-50 transition-colors"
-        >
-          <Eye size={18} />
-          <span>Previsualizar</span>
-        </button>
-      ) : null,
+      customContent: (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleReload}
+            title="Refrescar datos"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-400/50 shadow-sm
+                       text-gray-500 font-bold font-lato text-sm hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCw size={16} />
+          </button>
+          {cuestionarioActivo && (
+            <button
+              onClick={() => setShowPreview(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-400/50 shadow-sm
+                         text-gray-500 font-bold font-lato text-sm hover:bg-gray-50 transition-colors"
+            >
+              <Eye size={18} />
+              <span>Previsualizar</span>
+            </button>
+          )}
+        </div>
+      ),
     });
     return () => resetTopbar();
-  }, [setTopbarConfig, resetTopbar, cuestionarioActivo]);
+  }, [setTopbarConfig, resetTopbar, cuestionarioActivo, handleReload]);
 
   // Filtrar y ordenar alumnos
   // Cuando hay un grupo seleccionado y registro disponible, los alumnos del registro
@@ -396,9 +414,7 @@ export function TutorActivityView() {
     }
 
     // Ordenamiento
-    if (sortMode === 'numero_lista') {
-      baseList.sort((a, b) => (a.numero_lista ?? 999) - (b.numero_lista ?? 999));
-    } else if (sortMode === 'name') {
+    if (sortMode === 'name') {
       baseList.sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo, 'es'));
     } else {
       baseList.sort((a, b) => {
@@ -494,7 +510,6 @@ export function TutorActivityView() {
                 className="h-10 px-3 rounded-lg border border-[#0F7E3C]/50 shadow-sm bg-white
                            text-sm font-lato font-medium text-black focus:outline-none focus:ring-2 focus:ring-[#0F7E3C]/30"
               >
-                <option value="numero_lista">Por lista</option>
                 <option value="name">Por nombre</option>
                 <option value="group">Por grupo</option>
               </select>
@@ -585,7 +600,9 @@ function StudentCard({
   student: StudentCardData;
   showGroupBadge?: boolean;
 }) {
-  const estadoInfo = student.estado ? ESTADO_STYLES[student.estado] : null;
+  const estadoInfo = student.estado
+    ? ESTADO_STYLES[student.estado]
+    : { label: 'No asignado', className: 'bg-gray-100 text-gray-400' };
 
   return (
     <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-[#0F7E3C]/50 shadow-md bg-white">
@@ -608,11 +625,9 @@ function StudentCard({
 
       {/* Badges: estado y grupo */}
       <div className="shrink-0 flex items-center gap-2">
-        {estadoInfo && (
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${estadoInfo.className}`}>
-            {estadoInfo.label}
-          </span>
-        )}
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${estadoInfo.className}`}>
+          {estadoInfo.label}
+        </span>
         {showGroupBadge && student.grupo_clave && (
           <span className="text-sm font-bold text-[#0F7E3C] px-2 py-1 rounded-lg border border-[#0F7E3C]/50 whitespace-nowrap">
             {student.grupo_clave}

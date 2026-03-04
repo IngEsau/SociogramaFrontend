@@ -100,6 +100,19 @@ export const tutorService = {
   },
 
   /**
+   * Obtener el detalle de un cuestionario por ID, incluyendo sus preguntas.
+   * Se usa para cargar las preguntas del selector de clasificacion independientemente
+   * de si el cuestionario esta activo o ya venció.
+   * GET /admin/cuestionarios/:id/
+   */
+  async getCuestionarioDetalle(cuestionarioId: number): Promise<Cuestionario | null> {
+    const response = await api.get<{ cuestionario: Cuestionario }>(
+      `/admin/cuestionarios/${cuestionarioId}/`
+    );
+    return response.data.cuestionario ?? null;
+  },
+
+  /**
    * Obtener estadisticas sociometricas de un cuestionario
    * GET /academic/cuestionarios/:id/estadisticas/
    */

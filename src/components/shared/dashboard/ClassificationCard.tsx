@@ -1,8 +1,9 @@
 /**
  * Componente de clasificacion
- * Muestra el ranking de estudiantes por puntaje
+ * Muestra el ranking de estudiantes por puntaje con selector de preguntas
  */
 
+import { useState, useRef, useEffect } from 'react';
 import openEyeIcon from '../../../core/assets/open-eye-icon.svg';
 import closeEyeIcon from '../../../core/assets/close-eye-icon.svg';
 
@@ -12,13 +13,22 @@ interface ClassificationItem {
   id?: string;
 }
 
+interface PreguntaOption {
+  id: number;
+  label: string;
+}
+
 interface ClassificationCardProps {
   className?: string;
   title?: string;
   subtitle?: string;
   items?: ClassificationItem[];
   emptyMessage?: string;
+  /** @deprecated Usa preguntaOptions + onPreguntaChange en su lugar */
   onFilterClick?: () => void;
+  preguntaOptions?: PreguntaOption[];
+  selectedPreguntaId?: number | null;
+  onPreguntaChange?: (preguntaId: number) => void;
   onToggleVisibility?: () => void;
   isVisible?: boolean;
 }
@@ -30,46 +40,44 @@ export function ClassificationCard({
   items,
   emptyMessage = "Aun no se ha contestado ningun formulario.",
   onFilterClick,
+  preguntaOptions,
+  selectedPreguntaId,
+  onPreguntaChange,
   onToggleVisibility,
   isVisible = true,
 }: ClassificationCardProps) {
   const hasItems = items && items.length > 0;
+  const hasPreguntaSelector = preguntaOptions && preguntaOptions.length > 1 && onPreguntaChange;
+  const hasLegacyFilter = !hasPreguntaSelector && onFilterClick;
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
 
   return (
     <div className={`bg-white border border-emerald-600/35 rounded-xl shadow-sm p-5 flex flex-col ${className}`}>
-      {/* header */}
-      <div className="shrink-0 flex items-start justify-between">
-        <div className="min-w-0">
-          <h3 className="font-lato text-2xl font-extrabold text-(--verde-utp)">
-            {title}
-          </h3>
-          {hasItems && (
-            <div className="flex items-center gap-1 mt-1">
-              <p className="text-xs text-gray-400 truncate">{subtitle}</p>
-              {onFilterClick && (
-                <button
-                  type="button"
-                  onClick={onFilterClick}
-                  title="Seleccionar pregunta"
-                  className="flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-(--verde-utp) transition-colors shrink-0"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <line x1="4" y1="6" x2="20" y2="6" />
-                    <line x1="8" y1="12" x2="16" y2="12" />
-                    <line x1="11" y1="18" x2="13" y2="18" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
+      {/* header: titulo + ojo en la misma fila */}
+      <div className="shrink-0 flex items-center justify-between">
+        <h3 className="font-lato text-2xl font-extrabold text-(--verde-utp)">
+          {title}
+        </h3>
         {hasItems && onToggleVisibility && (
           <button
             type="button"
             onClick={onToggleVisibility}
             title={isVisible ? 'Ocultar clasificacion' : 'Mostrar clasificacion'}
-            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-gray-100 transition-colors ml-2 shrink-0"
+            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-gray-100 transition-colors shrink-0"
           >
             <img
               src={isVisible ? openEyeIcon : closeEyeIcon}
@@ -81,6 +89,67 @@ export function ClassificationCard({
           </button>
         )}
       </div>
+
+      {/* subtitulo de pregunta + icono selector: fila independiente con ancho completo */}
+      {hasItems && (
+        <div className="shrink-0 flex items-center gap-2 mt-1">
+          <p className="text-xs text-gray-400 truncate flex-1 min-w-0" title={subtitle}>{subtitle}</p>
+          {hasPreguntaSelector && (
+            <div className="relative shrink-0" ref={dropdownRef} style={{ width: '28px', display: 'flex', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen((prev) => !prev)}
+                title="Seleccionar pregunta"
+                className="flex h-5 w-5 items-center justify-center rounded text-(--verde-utp) hover:bg-emerald-50 transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1 z-50 w-64 max-h-52 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                  {preguntaOptions.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        onPreguntaChange(opt.id);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-emerald-50 ${
+                        opt.id === selectedPreguntaId
+                          ? 'bg-emerald-50 text-(--verde-utp) font-semibold'
+                          : 'text-gray-600'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {hasLegacyFilter && (
+            <button
+              type="button"
+              onClick={onFilterClick}
+              title="Cambiar pregunta"
+              className="flex h-5 w-5 items-center justify-center rounded text-(--verde-utp) hover:bg-emerald-50 transition-colors shrink-0"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
 
       {hasItems ? (
         <>
