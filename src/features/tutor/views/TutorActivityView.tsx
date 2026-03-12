@@ -13,8 +13,9 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, Search, Eye, ArrowLeft, Users, FileText, Calendar, Clock, RefreshCw } from 'lucide-react';
+import { Search, Eye, ArrowLeft, Users, FileText, Calendar, Clock, RefreshCw } from 'lucide-react';
 import { useTopbarStore, useToastStore } from '../../../store';
+import { PageLoader, Spinner } from '../../../components/ui';
 import { tutorService } from '../services';
 import type { TutorStudent, TutorGroupSummary } from '../services/tutor.service';
 import type { Cuestionario } from '../../admin/types';
@@ -440,14 +441,7 @@ export function TutorActivityView() {
   const isLoading = isLoadingCuestionario || isLoadingStudents;
 
   if (isLoading && students.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-12rem)]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 size={32} className="animate-spin text-[#245C52]" />
-          <p className="text-sm text-gray-500">Cargando datos de actividad...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Cargando datos de actividad..." />;
   }
 
   return (
@@ -520,7 +514,7 @@ export function TutorActivityView() {
           <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pr-1">
             {isLoadingStudents || isLoadingRegistro ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 size={24} className="animate-spin text-[#245C52]" />
+                <Spinner size="md" className="text-[#245C52]" />
               </div>
             ) : filteredStudents.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -553,7 +547,7 @@ export function TutorActivityView() {
 
           {isLoadingCuestionario ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 size={24} className="animate-spin text-[#245C52]" />
+              <Spinner size="md" className="text-[#245C52]" />
             </div>
           ) : !cuestionarioActivo ? (
             <NoCuestionarioActivo />

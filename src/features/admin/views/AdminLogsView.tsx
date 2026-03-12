@@ -10,7 +10,8 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronDown, Loader2, Moon, Sun } from 'lucide-react';
+import { ChevronDown, Moon, Sun } from 'lucide-react';
+import { Spinner } from '../../../components/ui';
 import { useTopbarStore } from '../../../store';
 // TODO: Descomentar cuando el endpoint /admin/logs/ esté disponible
 // import { adminService } from '../services';
@@ -258,7 +259,7 @@ export function AdminLogsView() {
         >
           {isLoading ? (
             <div className="h-full flex items-center justify-center">
-              <Loader2 size={32} className={`animate-spin ${darkMode ? 'text-[#0F7E3C]' : 'text-[#0F7E3C]'}`} />
+              <Spinner size="md" className="text-[#0F7E3C]" />
             </div>
           ) : logs.length === 0 ? (
             <div className="h-full flex items-center justify-center">

@@ -8,7 +8,12 @@
 import { api } from '../../../core/api/axios';
 import type { EstadisticasResponse } from '../../sociogram/types';
 import type { Cuestionario } from '../../admin/types';
-import type { RegistroResponse, ClasificacionPreguntaResponse } from '../types';
+import type {
+  RegistroResponse,
+  ClasificacionPreguntaResponse,
+  ArchivosListResponse,
+  SociogramaDataResponse,
+} from '../types';
 
 export interface Group {
   id: number;
@@ -276,5 +281,89 @@ export const tutorService = {
       { params: { grupo_id: grupoId, pregunta_id: preguntaId } }
     );
     return response.data;
+  },
+
+  // -------------------------------------------------------------------------
+  // Modulo de Archivos / Exportacion
+  // -------------------------------------------------------------------------
+
+  /**
+   * Listar todos los cuestionarios historicos del tutor.
+   * Sin restriccion de periodo activo — incluye todos los grupos del tutor.
+   * Ordenados por fecha_cuestionario descendente.
+   * GET /api/academic/archivos/cuestionarios/
+   */
+  async getArchivosListado(): Promise<ArchivosListResponse> {
+    const response = await api.get<ArchivosListResponse>(
+      '/academic/archivos/cuestionarios/'
+    );
+    return response.data;
+  },
+
+  /**
+   * Obtener datos del sociograma para renderizar y exportar como JPG.
+   * Version desbloqueada de /estadisticas/ — sin restriccion de activo.
+   * GET /api/academic/archivos/cuestionarios/{cuestionarioId}/sociograma/?grupo_id={grupoId}
+   */
+  async getSociogramaData(
+    cuestionarioId: number,
+    grupoId: number
+  ): Promise<SociogramaDataResponse> {
+    const response = await api.get<SociogramaDataResponse>(
+      `/academic/archivos/cuestionarios/${cuestionarioId}/sociograma/`,
+      { params: { grupo_id: grupoId } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Descargar CSV del sociograma como Blob.
+   * El backend devuelve text/csv con BOM UTF-8 (compatible con Excel).
+   * Filename: sociograma_{grupo_clave}_{cuestionario_id}.csv
+   * GET /api/academic/archivos/cuestionarios/{cuestionarioId}/exportar/csv/?grupo_id={grupoId}
+   */
+  async exportarCSV(cuestionarioId: number, grupoId: number): Promise<Blob> {
+    const response = await api.get(
+      `/academic/archivos/cuestionarios/${cuestionarioId}/exportar/csv/`,
+      {
+        params: { grupo_id: grupoId },
+        responseType: 'blob',
+      }
+    );
+    return response.data as Blob;
+  },
+
+  /**
+   * Descargar PDF del sociograma como Blob.
+   * A4 horizontal con tablas coloreadas por clasificacion.
+   * Filename: sociograma_{grupo_clave}_{cuestionario_id}.pdf
+   * GET /api/academic/archivos/cuestionarios/{cuestionarioId}/exportar/pdf/?grupo_id={grupoId}
+   */
+  async exportarPDF(cuestionarioId: number, grupoId: number): Promise<Blob> {
+    const response = await api.get(
+      `/academic/archivos/cuestionarios/${cuestionarioId}/exportar/pdf/`,
+      {
+        params: { grupo_id: grupoId },
+        responseType: 'blob',
+      }
+    );
+    return response.data as Blob;
+  },
+
+  /**
+   * Descargar la imagen PNG del sociograma generada por el backend.
+   * El servidor renderiza el grafo y devuelve la imagen directamente.
+   * Filename: sociograma_{grupo_clave}_{cuestionario_id}.png
+   * GET /api/academic/archivos/cuestionarios/{cuestionarioId}/exportar/imagen/?grupo_id={grupoId}
+   */
+  async exportarImagen(cuestionarioId: number, grupoId: number): Promise<Blob> {
+    const response = await api.get(
+      `/academic/archivos/cuestionarios/${cuestionarioId}/exportar/imagen/`,
+      {
+        params: { grupo_id: grupoId },
+        responseType: 'blob',
+      }
+    );
+    return response.data as Blob;
   },
 };

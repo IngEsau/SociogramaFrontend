@@ -19,6 +19,7 @@ interface ResponsesProgressCardProps {
   className?: string;
   onToggleVisibility?: () => void;
   isVisible?: boolean;
+  loading?: boolean;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -57,6 +58,7 @@ export function ResponsesProgressCard({
   className = '',
   onToggleVisibility,
   isVisible = true,
+  loading = false,
 }: ResponsesProgressCardProps) {
   // displayVisible se retrasa respecto a isVisible para que el blur se aplique
   // primero y el cambio de valor (0%) ocurra cuando el blur ya cubre el contenido.
@@ -108,6 +110,13 @@ export function ResponsesProgressCard({
         )}
       </div>
 
+      {loading ? (
+        <div className="mt-4 flex flex-col items-center gap-3 pb-2">
+          <div className="h-36 w-36 rounded-full bg-gray-200 animate-pulse" />
+          <div className="h-3.5 w-32 rounded bg-gray-200 animate-pulse" />
+        </div>
+      ) : (
+      <>
       <div className="mt-4 flex justify-center pb-2">
         <div
           className="relative h-36 w-36 rounded-full p-3 transition-all duration-300"
@@ -148,6 +157,8 @@ export function ResponsesProgressCard({
         <p className="mt-2 text-center text-sm text-gray-400">
           Aun no se han registrado respuestas.
         </p>
+      )}
+      </>
       )}
     </div>
   );

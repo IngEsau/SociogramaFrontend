@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -12,6 +12,7 @@ import {
   Library,
 } from "lucide-react";
 import { useAuthStore } from "../../store";
+import { ConfirmDialog } from "../../components/ui";
 
 type SidebarProps = {
   isOpen: boolean;
@@ -21,6 +22,7 @@ type SidebarProps = {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuthStore();
   const location = useLocation();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Obtener el rol para mostrarlo en el sidebar
   const userRole = user?.rol || 'USUARIO';
@@ -48,7 +50,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     await logout();
   };
 
-  // Navegación específica por rol
+  const handleLogoutRequest = () => {
+    setConfirmOpen(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setConfirmOpen(false);
+    await handleLogout();
+  };
+
+  const handleLogoutCancel = () => {
+    setConfirmOpen(false);
+  };
+
   const getNavItems = () => {
     const commonItems = [
       { icon: <LayoutDashboard size={20} />, label: 'Panel', to: basePath },
@@ -163,13 +177,25 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <NavItemButton 
             icon={<LogOut size={20} />} 
             label="Salir" 
-            onClick={handleLogout}
+            onClick={handleLogoutRequest}
+            isLogout
           />
         </div>
 
         <div className="flex-1" />
         <div className="h-3 md:h-4" />
       </aside>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Cerrar sesion"
+        description="¿Estas seguro de que deseas cerrar sesion? Se cerrara tu sesion actual y tendras que volver a iniciar sesion para acceder al sistema."
+        confirmLabel="Cerrar sesion"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+      />
     </>
   );
 }
@@ -208,21 +234,32 @@ function NavItem({
 function NavItemButton({ 
   icon, 
   label, 
-  onClick 
+  onClick,
+  isLogout,
 }: { 
   icon: React.ReactNode; 
   label: string;
   onClick?: () => void;
+  isLogout?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/10 text-left"
+      className={`
+        group w-full flex items-center gap-4 px-4 py-3 rounded-lg text-left
+        transition-colors duration-150
+        ${isLogout
+          ? 'hover:bg-red-600/20 hover:text-red-300'
+          : 'hover:bg-white/10'
+        }
+      `}
       aria-label={label}
       title={label}
       type="button"
     >
-      <span className="shrink-0">{icon}</span>
+      <span className={`shrink-0 transition-transform duration-200 ${isLogout ? 'group-hover:translate-x-0.5' : ''}`}>
+        {icon}
+      </span>
       <span className="text-sm font-medium">{label}</span>
     </button>
   );

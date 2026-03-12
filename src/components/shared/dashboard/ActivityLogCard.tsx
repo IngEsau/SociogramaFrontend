@@ -20,12 +20,14 @@ interface ActivityLogCardProps {
   items?: ActivityItem[];
   emptyMessage?: string;
   className?: string;
+  loading?: boolean;
 }
 
 export function ActivityLogCard({
   items,
   emptyMessage = 'Aun no se ha contestado ningun formulario.',
   className = '',
+  loading = false,
 }: ActivityLogCardProps) {
   const hasItems = items && items.length > 0;
   const [isVisible, setIsVisible] = useState(true);
@@ -54,7 +56,19 @@ export function ActivityLogCard({
         )}
       </div>
 
-      {hasItems ? (
+      {loading ? (
+        <div className="space-y-3 mt-1">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex gap-2 items-start">
+              <div className="h-3 w-3 rounded-full bg-gray-200 animate-pulse shrink-0 mt-0.5" />
+              <div className="space-y-1 flex-1">
+                <div className="h-3.5 rounded bg-gray-200 animate-pulse w-full" />
+                <div className="h-3 rounded bg-gray-200 animate-pulse w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : hasItems ? (
         <ul
           className="space-y-2 text-sm text-gray-700 overflow-y-auto flex-1 min-h-0 pr-1 transition-all duration-300"
           style={!isVisible ? { filter: 'blur(8px)', userSelect: 'none', pointerEvents: 'none' } : undefined}

@@ -21,8 +21,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
-  Loader2,
 } from 'lucide-react';
+import { Spinner } from '../../../components/ui';
 import { adminService } from '../services';
 import { useToastStore } from '../../../store';
 import type { CsvImportResponse } from '../types';
@@ -262,7 +262,7 @@ export function AdminCsvImportView() {
           >
             {isImporting ? (
               <>
-                <Loader2 size={16} className="animate-spin" />
+                <Spinner size="sm" className="text-white" />
                 Importando...
               </>
             ) : (

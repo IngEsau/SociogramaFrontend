@@ -13,6 +13,33 @@ export interface CommitteeFilters {
   grupo_id?: number;
 }
 
+export interface DivisionOption {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  activa: boolean;
+}
+
+export interface DivisionesResponse {
+  divisiones: DivisionOption[];
+}
+
+export interface TutorOption {
+  id: number;
+  username: string;
+  nombre_completo: string;
+  email: string;
+  rol: string;
+  is_active: boolean;
+  is_staff: boolean;
+}
+
+export interface TutoresResponse {
+  usuarios: TutorOption[];
+  total: number;
+}
+
 export interface CommitteeQuestionnaireFilters {
   periodo_id?: number;
   todos?: boolean;

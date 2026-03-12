@@ -34,7 +34,6 @@ import {
   Edit3,
   Lock,
   Check,
-  Loader2,
   Calendar,
   Pencil,
   Users,
@@ -42,7 +41,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useTopbarStore, useToastStore } from '../../../store';
-import { GreenBall, RedBall } from '../../../components/ui';
+import { GreenBall, RedBall, Spinner } from '../../../components/ui';
 import { adminService } from '../services';
 import {
   SurveyHeader,
@@ -976,7 +975,7 @@ export function AdminCuestionariosView() {
             <div className="flex flex-col p-3 sm:p-4">
               {isBankLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="animate-spin text-[#0F7E3C]" size={28} />
+                  <Spinner size="md" className="text-[#0F7E3C]" />
                   <span className="ml-2 text-sm text-gray-500">Cargando banco de preguntas…</span>
                 </div>
               ) : questionBank.length === 0 ? (
@@ -1288,7 +1287,7 @@ export function AdminCuestionariosView() {
                   onClick={handleConfirmEdits}
                   className="flex items-center gap-1.5 px-3 py-2 bg-[#0F7E3C] text-white rounded-lg text-sm font-semibold hover:bg-[#0a6630] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isConfirmingEdits ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  {isConfirmingEdits ? <Spinner size="sm" className="text-white" /> : <Check size={16} />}
                   <span className="hidden sm:inline">{isConfirmingEdits ? 'Guardando...' : 'Confirmar cambios'}</span>
                 </button>
                 <button
@@ -1415,7 +1414,7 @@ export function AdminCuestionariosView() {
 
                     {isBankDetailLoading ? (
                       <div className="flex items-center justify-center py-6">
-                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#0F7E3C] border-t-transparent" />
+                        <Spinner size="sm" className="text-[#0F7E3C]" />
                       </div>
                     ) : bankForDetail.length === 0 ? (
                       <p className="text-sm text-gray-400 py-4 text-center">Todas las preguntas del banco ya estan en este cuestionario.</p>
@@ -1617,7 +1616,7 @@ export function AdminCuestionariosView() {
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center h-40">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#0F7E3C] border-t-transparent" />
+              <Spinner size="md" className="text-[#0F7E3C]" />
             </div>
           ) : cuestionarios.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-60 gap-4">
@@ -2052,7 +2051,7 @@ function ConfirmModal({ action, isLoading, onConfirm, onCancel }: ConfirmModalPr
             disabled={isLoading}
             className={`flex items-center justify-center gap-2 px-5 py-2.5 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-70 disabled:cursor-not-allowed ${buttonStyles[action.type]}`}
           >
-            {isLoading && <Loader2 size={14} className="animate-spin" />}
+            {isLoading && <Spinner size="xs" className="text-current" />}
             {isLoading
               ? (action.type === 'activar' ? 'Activando...' : action.type === 'desactivar' ? 'Desactivando...' : 'Eliminando...')
               : action.type.charAt(0).toUpperCase() + action.type.slice(1)

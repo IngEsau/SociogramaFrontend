@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams, useNavigate } from 'react-router-dom';
+import { Spinner } from '../../components/ui';
 import { validateResetTokenService } from '../../features/auth/services';
 import { useToastStore } from '../../store';
 import { useAuthStore } from '../../store';
@@ -98,7 +99,7 @@ export const ResetPasswordGuard = ({ children }: ResetPasswordGuardProps) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FEFEFF]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#0F7E3C] mx-auto mb-4"></div>
+          <Spinner size="lg" className="text-[#0F7E3C] mx-auto mb-4" />
           <p className="text-[#313131] font-['Roboto']">Verificando enlace de recuperación...</p>
         </div>
       </div>

@@ -122,6 +122,64 @@ export interface RegistroResponse {
   alumnos: RegistroAlumno[];
 }
 
+// --- Modulo de Archivos / Exportacion ---
+
+export interface ArchivosCuestionarioItem {
+  cuestionario_id: number;
+  cuestionario_titulo: string;
+  grupo_id: number;
+  grupo_clave: string;
+  periodo_codigo: string;
+  periodo_nombre: string;
+  fecha_cuestionario: string;
+  total_alumnos: number;
+  completados: number;
+}
+
+export interface ArchivosListResponse {
+  total: number;
+  archivos: ArchivosCuestionarioItem[];
+}
+
+export interface SociogramaNodo {
+  numero_lista: number;
+  alumno_id: number;
+  matricula: string;
+  nombre: string;
+  tipo: 'ACEPTADO' | 'RECHAZADO' | 'INVISIBLE';
+  puntos_positivos: number;
+  puntos_negativos: number;
+  impacto_total: number;
+  tamano: number;
+  elecciones_recibidas: number;
+  elecciones_realizadas: number;
+  completo: boolean;
+}
+
+export interface SociogramaConexion {
+  origen_id: number;
+  origen_nombre: string;
+  destino_id: number;
+  destino_nombre: string;
+  peso: number;
+  tipo_conexion: 'fuerte' | 'debil';
+  porcentaje_mutuo: number;
+  es_mutua: boolean;
+  polaridad: 'POSITIVA' | 'NEGATIVA';
+}
+
+export interface SociogramaDataResponse {
+  cuestionario_id: number;
+  cuestionario_titulo: string;
+  periodo: string;
+  grupo_id: number;
+  grupo_clave: string;
+  total_alumnos: number;
+  respuestas_completas: number;
+  nodos: SociogramaNodo[];
+  conexiones: SociogramaConexion[];
+}
+
 // --- Clasificacion por pregunta ---
 
 export interface ClasificacionAlumno {

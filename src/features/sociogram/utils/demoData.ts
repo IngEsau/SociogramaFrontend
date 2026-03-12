@@ -93,6 +93,7 @@ function createDemoNodos(): SociogramNodo[] {
 
     nodos.push({
       alumno_id: id,
+      numero_lista: id,
       matricula: `UTP${String(id).padStart(5, '0')}`,
       nombre: `Alumno ${id}`,
       tipo,

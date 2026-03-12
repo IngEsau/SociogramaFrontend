@@ -1,40 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
+import { lazy } from 'react';
 
-// Auth views
-import { LoginView } from '../features/auth/views/LoginView';
-import { ForgotPasswordView } from '../features/auth/views/ForgotPasswordView';
-import { ResetPasswordView } from '../features/auth/views/ResetPasswordView';
-import { ChangePasswordView } from '../features/auth/views/ChangePasswordView';
-
-// Layout
-import DashboardLayout from '../layouts/DashboardLayout/DashboardLayout';
-
-// Feature views por rol
-import {
-  AdminPanelView,
-  AdminDashboardView,
-  AdminDatabaseImportView,
-  AdminImportHubView,
-  AdminExcelImportView,
-  AdminCsvImportView,
-  AdminLogsView,
-  AdminArchivosView,
-  AdminCuestionariosView,
-  AdminBancoPreguntasView,
-} from '../features/admin';
-import { TutorDashboardView, TutorPanelView, TutorArchivosView, TutorActivityView } from '../features/tutor';
-import { StudentDashboardView, StudentFormView } from '../features/student';
-import { SettingsView } from '../features/settings';
-
-// COMITÉ: Rol en revisión - puede fusionarse con ADMIN
-// Importar solo si COMMITTEE_ROLE_ENABLED = true en roleRouting.ts
-import { CommitteeGlobalGraphView, CommitteePanelView, CommitteeQuestionnairesView } from '../features/committee';
-import { COMMITTEE_ROLE_ENABLED } from '../core/routing';
-
-// Common views
-import { NotFoundView } from '../components/common';
-
-// Guards
+// Guards (síncronos, son ligeros y se usan en toda la app)
 import {
   RoleProtectedRoute,
   ResetPasswordGuard,
@@ -42,6 +9,111 @@ import {
   GuestGuard,
   RootRedirect,
 } from './guards';
+
+// Layout (síncrono, es el contenedor compartido de todas las rutas protegidas)
+import DashboardLayout from '../layouts/DashboardLayout/DashboardLayout';
+import { LazyRoute } from './LazyRoute';
+
+import { COMMITTEE_ROLE_ENABLED } from '../core/routing';
+
+// ============================================
+// Auth (lazy) - vistas públicas de bajo tráfico
+// ============================================
+const LoginView = lazy(() =>
+  import('../features/auth/views/LoginView').then((m) => ({ default: m.LoginView }))
+);
+const ForgotPasswordView = lazy(() =>
+  import('../features/auth/views/ForgotPasswordView').then((m) => ({ default: m.ForgotPasswordView }))
+);
+const ResetPasswordView = lazy(() =>
+  import('../features/auth/views/ResetPasswordView').then((m) => ({ default: m.ResetPasswordView }))
+);
+const ChangePasswordView = lazy(() =>
+  import('../features/auth/views/ChangePasswordView').then((m) => ({ default: m.ChangePasswordView }))
+);
+
+// ============================================
+// Admin (lazy)
+// ============================================
+const AdminPanelView = lazy(() =>
+  import('../features/admin/views').then((m) => ({ default: m.AdminPanelView }))
+);
+const AdminDashboardView = lazy(() =>
+  import('../features/admin/views').then((m) => ({ default: m.AdminDashboardView }))
+);
+const AdminDatabaseImportView = lazy(() =>
+  import('../features/admin/views').then((m) => ({ default: m.AdminDatabaseImportView }))
+);
+const AdminImportHubView = lazy(() =>
+  import('../features/admin/views').then((m) => ({ default: m.AdminImportHubView }))
+);
+const AdminExcelImportView = lazy(() =>
+  import('../features/admin/views').then((m) => ({ default: m.AdminExcelImportView }))
+);
+const AdminCsvImportView = lazy(() =>
+  import('../features/admin/views').then((m) => ({ default: m.AdminCsvImportView }))
+);
+const AdminLogsView = lazy(() =>
+  import('../features/admin/views').then((m) => ({ default: m.AdminLogsView }))
+);
+const AdminArchivosView = lazy(() =>
+  import('../features/admin/views').then((m) => ({ default: m.AdminArchivosView }))
+);
+const AdminCuestionariosView = lazy(() =>
+  import('../features/admin/views').then((m) => ({ default: m.AdminCuestionariosView }))
+);
+const AdminBancoPreguntasView = lazy(() =>
+  import('../features/admin/views').then((m) => ({ default: m.AdminBancoPreguntasView }))
+);
+
+// ============================================
+// Tutor (lazy)
+// ============================================
+const TutorPanelView = lazy(() =>
+  import('../features/tutor/views').then((m) => ({ default: m.TutorPanelView }))
+);
+const TutorDashboardView = lazy(() =>
+  import('../features/tutor/views').then((m) => ({ default: m.TutorDashboardView }))
+);
+const TutorArchivosView = lazy(() =>
+  import('../features/tutor/views').then((m) => ({ default: m.TutorArchivosView }))
+);
+const TutorActivityView = lazy(() =>
+  import('../features/tutor/views').then((m) => ({ default: m.TutorActivityView }))
+);
+
+// ============================================
+// Student (lazy)
+// ============================================
+const StudentDashboardView = lazy(() =>
+  import('../features/student/views').then((m) => ({ default: m.StudentDashboardView }))
+);
+const StudentFormView = lazy(() =>
+  import('../features/student/form/views').then((m) => ({ default: m.StudentFormView }))
+);
+
+// ============================================
+// Committee (lazy)
+// ============================================
+const CommitteePanelView = lazy(() =>
+  import('../features/committee/views').then((m) => ({ default: m.CommitteePanelView }))
+);
+const CommitteeQuestionnairesView = lazy(() =>
+  import('../features/committee/views').then((m) => ({ default: m.CommitteeQuestionnairesView }))
+);
+const CommitteeGlobalGraphView = lazy(() =>
+  import('../features/committee/views').then((m) => ({ default: m.CommitteeGlobalGraphView }))
+);
+
+// ============================================
+// Settings y 404 (lazy)
+// ============================================
+const SettingsView = lazy(() =>
+  import('../features/settings/views').then((m) => ({ default: m.SettingsView }))
+);
+const NotFoundView = lazy(() =>
+  import('../components/common/views').then((m) => ({ default: m.NotFoundView }))
+);
 
 export const router = createBrowserRouter([
   // Redirección inteligente en raíz
@@ -57,7 +129,7 @@ export const router = createBrowserRouter([
     path: '/login',
     element: (
       <GuestGuard>
-        <LoginView />
+        <LazyRoute><LoginView /></LazyRoute>
       </GuestGuard>
     ),
   },
@@ -65,7 +137,7 @@ export const router = createBrowserRouter([
     path: '/forgot-password',
     element: (
       <GuestGuard>
-        <ForgotPasswordView />
+        <LazyRoute><ForgotPasswordView /></LazyRoute>
       </GuestGuard>
     ),
   },
@@ -73,7 +145,7 @@ export const router = createBrowserRouter([
     path: '/reset-password',
     element: (
       <ResetPasswordGuard>
-        <ResetPasswordView />
+        <LazyRoute><ResetPasswordView /></LazyRoute>
       </ResetPasswordGuard>
     ),
   },
@@ -83,7 +155,7 @@ export const router = createBrowserRouter([
     path: '/change-password',
     element: (
       <ChangePasswordGuard>
-        <ChangePasswordView />
+        <LazyRoute><ChangePasswordView /></LazyRoute>
       </ChangePasswordGuard>
     ),
   },
@@ -99,17 +171,17 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
     children: [
-      { index: true, element: <AdminPanelView /> },
-      { path: 'settings', element: <SettingsView /> },
-      { path: 'panel-legacy', element: <AdminDashboardView /> },
-      { path: 'import', element: <AdminImportHubView /> },
-      { path: 'import/excel', element: <AdminExcelImportView /> },
-      { path: 'import/:type', element: <AdminCsvImportView /> },
-      { path: 'import/legacy', element: <AdminDatabaseImportView /> },
-      { path: 'logs', element: <AdminLogsView /> },
-      { path: 'archivos', element: <AdminArchivosView /> },
-      { path: 'cuestionarios', element: <AdminCuestionariosView /> },
-      { path: 'cuestionarios/banco', element: <AdminBancoPreguntasView /> },
+      { index: true, element: <LazyRoute><AdminPanelView /></LazyRoute> },
+      { path: 'settings', element: <LazyRoute><SettingsView /></LazyRoute> },
+      { path: 'panel-legacy', element: <LazyRoute><AdminDashboardView /></LazyRoute> },
+      { path: 'import', element: <LazyRoute><AdminImportHubView /></LazyRoute> },
+      { path: 'import/excel', element: <LazyRoute><AdminExcelImportView /></LazyRoute> },
+      { path: 'import/:type', element: <LazyRoute><AdminCsvImportView /></LazyRoute> },
+      { path: 'import/legacy', element: <LazyRoute><AdminDatabaseImportView /></LazyRoute> },
+      { path: 'logs', element: <LazyRoute><AdminLogsView /></LazyRoute> },
+      { path: 'archivos', element: <LazyRoute><AdminArchivosView /></LazyRoute> },
+      { path: 'cuestionarios', element: <LazyRoute><AdminCuestionariosView /></LazyRoute> },
+      { path: 'cuestionarios/banco', element: <LazyRoute><AdminBancoPreguntasView /></LazyRoute> },
       // Aquí irán más rutas de admin:
       // { path: 'users', element: <UserManagement /> },
       // { path: 'groups', element: <Groups /> },
@@ -127,11 +199,11 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
     children: [
-      { index: true, element: <TutorPanelView /> },
-      { path: 'dashboard', element: <TutorDashboardView /> },
-      { path: 'archivos', element: <TutorArchivosView /> },
-      { path: 'activity', element: <TutorActivityView /> },
-      { path: 'settings', element: <SettingsView /> },
+      { index: true, element: <LazyRoute><TutorPanelView /></LazyRoute> },
+      { path: 'dashboard', element: <LazyRoute><TutorDashboardView /></LazyRoute> },
+      { path: 'archivos', element: <LazyRoute><TutorArchivosView /></LazyRoute> },
+      { path: 'activity', element: <LazyRoute><TutorActivityView /></LazyRoute> },
+      { path: 'settings', element: <LazyRoute><SettingsView /></LazyRoute> },
       // Aquí irán más rutas de tutor:
       // { path: 'assign', element: <AssignSociogram /> },
       // { path: 'reports', element: <ReportsList /> },
@@ -150,8 +222,8 @@ export const router = createBrowserRouter([
       </RoleProtectedRoute>
     ),
     children: [
-      { index: true, element: <StudentDashboardView /> },
-      { path: 'settings', element: <SettingsView /> },
+      { index: true, element: <LazyRoute><StudentDashboardView /></LazyRoute> },
+      { path: 'settings', element: <LazyRoute><SettingsView /></LazyRoute> },
       // para que tenga su propio diseño a pantalla completa
     ],
   },
@@ -171,10 +243,10 @@ export const router = createBrowserRouter([
             </RoleProtectedRoute>
           ),
           children: [
-            { index: true, element: <CommitteePanelView /> },
-            { path: 'cuestionarios', element: <CommitteeQuestionnairesView /> },
-            { path: 'grafo-global', element: <CommitteeGlobalGraphView /> },
-            { path: 'settings', element: <SettingsView /> },
+            { index: true, element: <LazyRoute><CommitteePanelView /></LazyRoute> },
+            { path: 'cuestionarios', element: <LazyRoute><CommitteeQuestionnairesView /></LazyRoute> },
+            { path: 'grafo-global', element: <LazyRoute><CommitteeGlobalGraphView /></LazyRoute> },
+            { path: 'settings', element: <LazyRoute><SettingsView /></LazyRoute> },
           ],
         },
       ]
@@ -190,7 +262,7 @@ export const router = createBrowserRouter([
     path: '/student-form',
     element: (
       <RoleProtectedRoute allowedRoles={['ALUMNO', 'DOCENTE', 'ADMIN']}>
-        <StudentFormView />
+        <LazyRoute><StudentFormView /></LazyRoute>
       </RoleProtectedRoute>
     ),
   },
@@ -199,7 +271,7 @@ export const router = createBrowserRouter([
     path: '/student-form/:cuestionarioId',
     element: (
       <RoleProtectedRoute allowedRoles={['ALUMNO', 'DOCENTE', 'ADMIN']}>
-        <StudentFormView />
+        <LazyRoute><StudentFormView /></LazyRoute>
       </RoleProtectedRoute>
     ),
   },
@@ -208,6 +280,6 @@ export const router = createBrowserRouter([
   // ============================================
   {
     path: '*',
-    element: <NotFoundView />,
+    element: <LazyRoute><NotFoundView /></LazyRoute>,
   },
 ]);

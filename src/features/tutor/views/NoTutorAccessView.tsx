@@ -4,10 +4,13 @@
  * Se muestra cuando el usuario es DOCENTE pero no tiene el rol de tutor asignado.
  */
 
+import { useState } from 'react';
 import { useAuthStore } from '../../../store';
+import { ConfirmDialog } from '../../../components/ui';
 
 export function NoTutorAccessView() {
   const logout = useAuthStore((s) => s.logout);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white p-6">
@@ -24,17 +27,31 @@ export function NoTutorAccessView() {
         </h2>
 
         <p className="text-[#245C52] text-base mb-6">
-          ¡No tienes un rol de tutor asignado! Si crees que se trata de un error,
+          No tienes un rol de tutor asignado. Si crees que se trata de un error,
           ponte en contacto con el administrador.
         </p>
 
         <button
-          onClick={() => logout()}
+          onClick={() => setConfirmOpen(true)}
           className="bg-[#0F7E3C] text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
         >
-          Cerrar sesión
+          Cerrar sesion
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Cerrar sesion"
+        description="¿Estas seguro de que deseas cerrar sesion? Se cerrara tu sesion actual y tendras que volver a iniciar sesion para acceder al sistema."
+        confirmLabel="Cerrar sesion"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => {
+          setConfirmOpen(false);
+          logout();
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

@@ -14,8 +14,9 @@
  */
 
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, BarChart3, Loader2, Network, RefreshCw, Rows3, Users } from 'lucide-react';
+import { AlertTriangle, BarChart3, Network, RefreshCw, Rows3, Users } from 'lucide-react';
 import { ActivityLogCard, ClassificationCard, ResponsesProgressCard } from '../../../components/shared/dashboard';
+import { PageLoader, Skeleton, Spinner } from '../../../components/ui';
 import { useToastStore, useTopbarStore } from '../../../store';
 import { mapGrupoEstadisticasToSociogramData, SociogramGraph, SociogramLegend } from '../../sociogram';
 import { committeeService } from '../services';
@@ -31,6 +32,8 @@ import type {
   CommitteeQuestionnaireProgressResponse,
   CommitteeQuestionnaireStatsGroup,
   CommitteeQuestionnaireStatsResponse,
+  DivisionOption,
+  TutorOption,
 } from '../types';
 
 type CommitteeTab = 'resumen' | 'cuestionarios' | 'sociograma';
@@ -69,10 +72,12 @@ function KpiCard({
   title,
   value,
   icon,
+  loading = false,
 }: {
   title: string;
   value: string | number;
   icon: ReactNode;
+  loading?: boolean;
 }) {
   return (
     <article className="rounded-xl border border-emerald-600/25 bg-white px-4 py-3 shadow-sm">
@@ -80,7 +85,11 @@ function KpiCard({
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</p>
         <span className="text-[#0B5A4A]">{icon}</span>
       </div>
-      <p className="text-2xl font-bold text-[#0B5A4A]">{value}</p>
+      {loading ? (
+        <Skeleton variant="bar" className="mt-1 h-7 w-24" />
+      ) : (
+        <p className="text-2xl font-bold text-[#0B5A4A]">{value}</p>
+      )}
     </article>
   );
 }
@@ -157,6 +166,7 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
   const [activeTab, setActiveTab] = useState<CommitteeTab>(resolvedInitialTab);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDataReady, setIsDataReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [allQuestionnaires, setAllQuestionnaires] = useState<CommitteeQuestionnaireListItem[]>([]);
@@ -165,8 +175,12 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [selectedDivisionId, setSelectedDivisionId] = useState<number | null>(null);
   const [selectedTutorId, setSelectedTutorId] = useState<number | null>(null);
-  const [draftDivisionId, setDraftDivisionId] = useState('');
-  const [draftTutorId, setDraftTutorId] = useState('');
+  /** Modo de filtro avanzado: 'none' | 'division' | 'tutor' */
+  const [filterMode, setFilterMode] = useState<'none' | 'division' | 'tutor'>('none');
+  const [divisionOptions, setDivisionOptions] = useState<DivisionOption[]>([]);
+  const [tutorOptions, setTutorOptions] = useState<TutorOption[]>([]);
+  /** Flag para evitar que el auto-select se dispare después de que el usuario limpie */
+  const [hasBootstrapped, setHasBootstrapped] = useState(false);
   const [showNodeNames, setShowNodeNames] = useState(false);
 
   const [overview, setOverview] = useState<CommitteeOverviewResponse | null>(null);
@@ -199,7 +213,7 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
   }, [allQuestionnaires]);
 
   const questionnaires = useMemo(() => {
-    if (!selectedPeriodId) return allQuestionnaires;
+    if (!selectedPeriodId) return [];
     return allQuestionnaires.filter((questionnaire) => questionnaire.periodo === selectedPeriodId);
   }, [allQuestionnaires, selectedPeriodId]);
 
@@ -334,6 +348,7 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
         setOverviewAlerts(overviewAlertsResponse);
         setOverviewCentrality(overviewCentralityResponse);
         setGraphs({ distribucion_por_grupo: graphsResponse.distribucion_por_grupo });
+        setIsDataReady(true);
       } catch (err) {
         const message = extractErrorMessage(err, 'No se pudo cargar la informacion del Comite.');
         setError(message);
@@ -361,9 +376,15 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
     setError(null);
 
     try {
-      const response = await committeeService.getCuestionarios({ todos: true });
-      const available = response.cuestionarios ?? [];
+      const [questionnaireResponse, divisionesResponse, tutoresResponse] = await Promise.all([
+        committeeService.getCuestionarios({ todos: true }),
+        committeeService.getDivisiones().catch(() => ({ divisiones: [] as DivisionOption[] })),
+        committeeService.getTutores().catch(() => ({ usuarios: [] as TutorOption[], total: 0 })),
+      ]);
+      const available = questionnaireResponse.cuestionarios ?? [];
       setAllQuestionnaires(available);
+      setDivisionOptions(divisionesResponse.divisiones ?? []);
+      setTutorOptions(tutoresResponse.usuarios ?? []);
     } catch (err) {
       const message = extractErrorMessage(err, 'No se pudo obtener el catalogo de cuestionarios.');
       setError(message);
@@ -381,6 +402,19 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  // Auto-seleccionar periodo que tenga un cuestionario activo SOLO al cargar inicial
+  useEffect(() => {
+    if (hasBootstrapped || allQuestionnaires.length === 0) return;
+
+    const activeQ = allQuestionnaires.find((q) => q.esta_activo);
+    if (activeQ) {
+      setSelectedPeriodId(activeQ.periodo);
+    } else if (periodOptions.length > 0) {
+      setSelectedPeriodId(periodOptions[0].id);
+    }
+    setHasBootstrapped(true);
+  }, [allQuestionnaires, periodOptions, hasBootstrapped]);
 
   useEffect(() => {
     if (questionnaires.length === 0) {
@@ -409,10 +443,16 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
   const handlePeriodChange = useCallback((nextPeriodId: number | null) => {
     setSelectedPeriodId(nextPeriodId);
     setSelectedGroupId(null);
+    setSelectedDivisionId(null);
+    setSelectedTutorId(null);
+    setFilterMode('none');
   }, []);
 
   const handleQuestionnaireChange = useCallback((nextQuestionnaireId: number) => {
     setSelectedGroupId(null);
+    setSelectedDivisionId(null);
+    setSelectedTutorId(null);
+    setFilterMode('none');
     setSelectedQuestionnaireId(nextQuestionnaireId);
   }, []);
 
@@ -420,159 +460,184 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
     setSelectedGroupId(nextGroupId);
   }, []);
 
-  const handleApplyAdvancedFilters = useCallback(() => {
-    const rawDivision = draftDivisionId.trim();
-    const rawTutor = draftTutorId.trim();
-
-    let nextDivisionId: number | null = null;
-    let nextTutorId: number | null = null;
-
-    if (rawDivision) {
-      const parsedDivision = Number(rawDivision);
-      if (!Number.isFinite(parsedDivision) || parsedDivision <= 0) {
-        showToast({
-          type: 'warning',
-          message: 'division_id debe ser un numero entero positivo.',
-        });
-        return;
-      }
-      nextDivisionId = parsedDivision;
-    }
-
-    if (rawTutor) {
-      const parsedTutor = Number(rawTutor);
-      if (!Number.isFinite(parsedTutor) || parsedTutor <= 0) {
-        showToast({
-          type: 'warning',
-          message: 'tutor_id debe ser un numero entero positivo.',
-        });
-        return;
-      }
-      nextTutorId = parsedTutor;
-    }
-
+  const handleDivisionChange = useCallback((nextDivisionId: number | null) => {
     setSelectedDivisionId(nextDivisionId);
+    setSelectedTutorId(null);
+    setSelectedGroupId(null);
+    if (nextDivisionId) {
+      setFilterMode('division');
+    } else {
+      setFilterMode('none');
+    }
+  }, []);
+
+  const handleTutorChange = useCallback((nextTutorId: number | null) => {
     setSelectedTutorId(nextTutorId);
-  }, [draftDivisionId, draftTutorId, showToast]);
+    setSelectedDivisionId(null);
+    setSelectedGroupId(null);
+    if (nextTutorId) {
+      setFilterMode('tutor');
+    } else {
+      setFilterMode('none');
+    }
+  }, []);
 
   const handleClearAdvancedFilters = useCallback(() => {
-    setDraftDivisionId('');
-    setDraftTutorId('');
+    setSelectedPeriodId(null);
+    setSelectedQuestionnaireId(null);
     setSelectedDivisionId(null);
     setSelectedTutorId(null);
+    setSelectedGroupId(null);
+    setFilterMode('none');
+    setIsDataReady(false);
+    setError(null);
   }, []);
 
   const topbarControls = useMemo(
     () => (
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={selectedPeriodId ?? ''}
-          onChange={(event) => {
-            const value = event.target.value;
-            handlePeriodChange(value ? Number(value) : null);
-          }}
-          className="min-w-56 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm"
-          disabled={periodOptions.length === 0}
-        >
-          <option value="">Todos los periodos</option>
-          {periodOptions.map((period) => (
-            <option key={period.id} value={period.id}>
-              {period.label}
-            </option>
-          ))}
-        </select>
+      <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+        {/* Fila de selectores */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Periodo */}
+          <select
+            value={selectedPeriodId ?? ''}
+            onChange={(event) => {
+              const value = event.target.value;
+              handlePeriodChange(value ? Number(value) : null);
+            }}
+            className="w-full sm:w-auto sm:min-w-40 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs sm:text-sm"
+            disabled={periodOptions.length === 0}
+          >
+            <option value="">Selecciona un periodo</option>
+            {periodOptions.map((period) => (
+              <option key={period.id} value={period.id}>
+                {period.label}
+              </option>
+            ))}
+          </select>
 
-        <select
-          value={selectedQuestionnaireId ?? ''}
-          onChange={(event) => handleQuestionnaireChange(Number(event.target.value))}
-          className="min-w-60 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm"
-          disabled={questionnaires.length === 0}
-        >
-          {questionnaires.length === 0 && <option value="">Sin cuestionarios disponibles</option>}
-          {questionnaires.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.titulo}
-              {item.esta_activo ? ' (activo)' : ''}
-            </option>
-          ))}
-        </select>
+          {/* Cuestionario — deshabilitado si no hay periodo */}
+          <select
+            value={selectedQuestionnaireId ?? ''}
+            onChange={(event) => handleQuestionnaireChange(Number(event.target.value))}
+            className="w-full sm:w-auto sm:min-w-44 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs sm:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!selectedPeriodId || questionnaires.length === 0}
+          >
+            {!selectedPeriodId ? (
+              <option value="">Selecciona un periodo primero</option>
+            ) : questionnaires.length === 0 ? (
+              <option value="">Sin cuestionarios disponibles</option>
+            ) : (
+              questionnaires.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.titulo}
+                  {item.esta_activo ? ' (activo)' : ''}
+                </option>
+              ))
+            )}
+          </select>
 
-        <select
-          value={selectedGroupId ?? ''}
-          onChange={(event) => {
-            const value = event.target.value;
-            handleGroupChange(value ? Number(value) : null);
-          }}
-          className="min-w-52 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm"
-          disabled={groupOptions.length === 0}
-        >
-          <option value="">Todos los grupos</option>
-          {groupOptions.map((group) => (
-            <option key={group.id} value={group.id}>
-              {group.label}
-            </option>
-          ))}
-        </select>
+          {/* División — se muestra solo si hay opciones; se deshabilita si hay tutor seleccionado */}
+          {divisionOptions.length > 0 && (
+          <select
+            value={selectedDivisionId ?? ''}
+            onChange={(event) => {
+              const value = event.target.value;
+              handleDivisionChange(value ? Number(value) : null);
+            }}
+            className="w-full sm:w-auto sm:min-w-36 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs sm:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={filterMode === 'tutor' || !selectedQuestionnaireId}
+          >
+            <option value="">División</option>
+            {divisionOptions.map((div) => (
+              <option key={div.id} value={div.id}>
+                {div.nombre}
+              </option>
+            ))}
+          </select>
+          )}
 
-        <input
-          value={draftDivisionId}
-          onChange={(event) => setDraftDivisionId(event.target.value)}
-          className="w-34 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm"
-          placeholder="division_id"
-          inputMode="numeric"
-        />
+          {/* Tutor — se muestra solo si hay opciones; se deshabilita si hay división seleccionada */}
+          {tutorOptions.length > 0 && (
+          <select
+            value={selectedTutorId ?? ''}
+            onChange={(event) => {
+              const value = event.target.value;
+              handleTutorChange(value ? Number(value) : null);
+            }}
+            className="w-full sm:w-auto sm:min-w-36 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs sm:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={filterMode === 'division' || !selectedQuestionnaireId}
+          >
+            <option value="">Tutor</option>
+            {tutorOptions.map((tutor) => (
+              <option key={tutor.id} value={tutor.id}>
+                {tutor.nombre_completo}
+              </option>
+            ))}
+          </select>
+          )}
 
-        <input
-          value={draftTutorId}
-          onChange={(event) => setDraftTutorId(event.target.value)}
-          className="w-30 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm"
-          placeholder="tutor_id"
-          inputMode="numeric"
-        />
+          {/* Grupo — disponible cuando hay cuestionario */}
+          <select
+            value={selectedGroupId ?? ''}
+            onChange={(event) => {
+              const value = event.target.value;
+              handleGroupChange(value ? Number(value) : null);
+            }}
+            className="w-full sm:w-auto sm:min-w-36 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs sm:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={groupOptions.length === 0 || !selectedQuestionnaireId}
+          >
+            <option value="">Todos los grupos</option>
+            {groupOptions.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <button
-          type="button"
-          onClick={handleApplyAdvancedFilters}
-          className="rounded-md border border-[#0B5A4A]/35 bg-white px-3 py-2 text-sm font-semibold text-[#0B5A4A] hover:bg-emerald-50"
-        >
-          Aplicar filtros
-        </button>
+        {/* Botones de acción */}
+        <div className="flex items-center gap-2 shrink-0 sm:ml-auto">
+          <button
+            type="button"
+            onClick={handleClearAdvancedFilters}
+            className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-100"
+          >
+            Limpiar
+          </button>
 
-        <button
-          type="button"
-          onClick={handleClearAdvancedFilters}
-          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
-        >
-          Limpiar
-        </button>
-
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={isRefreshing || !selectedQuestionnaireId}
-          className="inline-flex items-center gap-2 rounded-md border border-[#0B5A4A]/35 bg-white px-3 py-2 text-sm font-semibold text-[#0B5A4A] hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <RefreshCw size={15} className={isRefreshing ? 'animate-spin' : ''} />
-          Actualizar
-        </button>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isRefreshing || !selectedQuestionnaireId}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[#0B5A4A]/35 bg-white px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-[#0B5A4A] hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw size={15} className={isRefreshing ? 'animate-spin' : ''} />
+            Actualizar
+          </button>
+        </div>
       </div>
     ),
     [
-      draftDivisionId,
-      draftTutorId,
+      divisionOptions,
+      filterMode,
       groupOptions,
-      handleApplyAdvancedFilters,
       handleClearAdvancedFilters,
+      handleDivisionChange,
       handleGroupChange,
       handlePeriodChange,
       handleQuestionnaireChange,
       handleRefresh,
+      handleTutorChange,
       isRefreshing,
       periodOptions,
       questionnaires,
-      selectedPeriodId,
+      selectedDivisionId,
       selectedGroupId,
+      selectedPeriodId,
       selectedQuestionnaireId,
+      selectedTutorId,
+      tutorOptions,
     ]
   );
 
@@ -590,7 +655,6 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
     };
   }, [resetTopbar, setTopbarConfig, topbarControls]);
 
-  const hasQuestionnaires = questionnaires.length > 0;
   const appliedFilterChips = useMemo(() => {
     const chips: string[] = [];
 
@@ -598,46 +662,34 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
       const period = periodOptions.find((item) => item.id === selectedPeriodId);
       chips.push(`Periodo: ${period?.label ?? selectedPeriodId}`);
     }
-    if (selectedDivisionId) chips.push(`division_id: ${selectedDivisionId}`);
-    if (selectedTutorId) chips.push(`tutor_id: ${selectedTutorId}`);
+    if (selectedDivisionId) {
+      const division = divisionOptions.find((item) => item.id === selectedDivisionId);
+      chips.push(`División: ${division?.nombre ?? selectedDivisionId}`);
+    }
+    if (selectedTutorId) {
+      const tutor = tutorOptions.find((item) => item.id === selectedTutorId);
+      chips.push(`Tutor: ${tutor?.nombre_completo ?? selectedTutorId}`);
+    }
     if (selectedGroupId) {
       const group = groupOptions.find((item) => item.id === selectedGroupId);
       chips.push(`Grupo: ${group?.label ?? selectedGroupId}`);
     }
 
     return chips;
-  }, [groupOptions, periodOptions, selectedDivisionId, selectedGroupId, selectedPeriodId, selectedTutorId]);
+  }, [divisionOptions, groupOptions, periodOptions, selectedDivisionId, selectedGroupId, selectedPeriodId, selectedTutorId, tutorOptions]);
 
   const isStandaloneView = mode !== 'full';
-  const headerByMode: Record<Exclude<CommitteeViewMode, 'full'>, { title: string; subtitle: string }> = {
-    panel: {
-      title: 'Panel del Comite',
-      subtitle: 'Monitoreo global institucional con indicadores consolidados por cuestionario.',
-    },
-    cuestionarios: {
-      title: 'Gestion de Cuestionarios',
-      subtitle: 'Seguimiento operativo de avance y contenido de cuestionarios institucionales.',
-    },
-    sociograma: {
-      title: 'Grafo Global',
-      subtitle: 'Visualizacion sociometrica consolidada por cuestionario y grupo.',
-    },
-  };
-  const currentHeader =
-    mode === 'full'
-      ? {
-          title: 'Comite de Analitica Sociometrica',
-          subtitle: 'Vista global de resultados agregados por cuestionario, periodo y grupo, en modo solo lectura.',
-        }
-      : headerByMode[mode];
+  const hasCuestionariosEnSistema = allQuestionnaires.length > 0;
+  const hasSelectedPeriod = selectedPeriodId !== null;
+  const hasQuestionnaires = questionnaires.length > 0;
+
+  // Bootstrap: aun no sabemos si hay cuestionarios — mostrar loader de pagina completa
+  if (isLoading && allQuestionnaires.length === 0) {
+    return <PageLoader message="Cargando datos del Comite..." />;
+  }
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-emerald-400/35 bg-gradient-to-r from-[#0B5A4A] to-[#13715D] px-6 py-5 text-white shadow-sm">
-        <h2 className="text-2xl font-extrabold">{currentHeader.title}</h2>
-        <p className="mt-1 text-sm text-white/85">{currentHeader.subtitle}</p>
-      </section>
-
       {!isStandaloneView && (
         <nav className="flex flex-wrap items-center gap-2">
           <TabButton
@@ -683,7 +735,7 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
         </div>
       )}
 
-      {!hasQuestionnaires && !isLoading && (
+      {!hasCuestionariosEnSistema && !isLoading && (
         <section className="rounded-xl border border-emerald-600/25 bg-white px-6 py-8 text-center shadow-sm">
           <p className="text-base font-semibold text-[#0B5A4A]">No hay cuestionarios disponibles para el Comite.</p>
           <p className="mt-1 text-sm text-gray-500">
@@ -692,34 +744,46 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
         </section>
       )}
 
-      {hasQuestionnaires && isLoading && (
-        <section className="rounded-xl border border-emerald-600/25 bg-white px-6 py-10 shadow-sm">
-          <div className="flex items-center justify-center gap-2 text-[#0B5A4A]">
-            <Loader2 size={18} className="animate-spin" />
-            <p className="font-semibold">Cargando dashboard del Comite...</p>
+      {hasCuestionariosEnSistema && !hasSelectedPeriod && !isLoading && (
+        <section className="rounded-xl border border-emerald-600/25 bg-white px-6 py-8 text-center shadow-sm">
+          <p className="text-base font-semibold text-[#0B5A4A]">Selecciona un periodo para comenzar</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Elige un periodo en la barra superior para visualizar los datos del Comite.
+          </p>
+        </section>
+      )}
+
+      {hasQuestionnaires && !isDataReady && hasSelectedPeriod && (
+        <section className="rounded-xl border border-emerald-600/25 bg-white px-6 py-14 shadow-sm">
+          <div className="flex flex-col items-center gap-4">
+            <Spinner size="lg" className="text-[#0B5A4A]" />
+            <p className="text-sm font-medium text-gray-500 animate-pulse">Cargando datos del Comite...</p>
           </div>
         </section>
       )}
 
-      {hasQuestionnaires && !isLoading && activeTab === 'resumen' && (
+      {hasQuestionnaires && isDataReady && activeTab === 'resumen' && (
         <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_360px]">
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <KpiCard title="Periodo" value={overview?.periodo.codigo ?? '-'} icon={<Rows3 size={16} />} />
+              <KpiCard title="Periodo" value={overview?.periodo.codigo ?? '-'} icon={<Rows3 size={16} />} loading={isLoading} />
               <KpiCard
                 title="Grupos analizados"
                 value={overview?.total_grupos ?? 0}
                 icon={<Users size={16} />}
+                loading={isLoading}
               />
               <KpiCard
                 title="Aislados detectados"
                 value={overviewAlerts?.alertas_aislados.total_global ?? 0}
                 icon={<AlertTriangle size={16} />}
+                loading={isLoading}
               />
               <KpiCard
                 title="Completado global"
                 value={`${overviewProgress?.porcentaje_completado_global ?? 0}%`}
                 icon={<BarChart3 size={16} />}
+                loading={isLoading}
               />
             </div>
 
@@ -730,7 +794,22 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
               </p>
 
               <div className="space-y-4">
-                {(graphs?.distribucion_por_grupo ?? []).length === 0 ? (
+                {isLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Skeleton variant="text" className="w-24" />
+                        <Skeleton variant="text" className="w-16" />
+                      </div>
+                      <Skeleton variant="bar" className="h-3 w-full" />
+                      <div className="flex gap-4">
+                        <Skeleton variant="text" className="w-20" />
+                        <Skeleton variant="text" className="w-20" />
+                        <Skeleton variant="text" className="w-20" />
+                      </div>
+                    </div>
+                  ))
+                ) : (graphs?.distribucion_por_grupo ?? []).length === 0 ? (
                   <p className="text-sm text-gray-500">No hay datos de distribucion disponibles.</p>
                 ) : (
                   (graphs?.distribucion_por_grupo ?? []).map((item) => (
@@ -746,7 +825,17 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
                 Grupos con alumnos invisibles (sin elecciones positivas recibidas).
               </p>
 
-              {(overviewAlerts?.alertas_aislados.por_grupo ?? []).length === 0 ? (
+              {isLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton variant="text" className="w-20" />
+                      <Skeleton variant="text" className="w-28" />
+                      <Skeleton variant="text" className="w-12" />
+                    </div>
+                  ))}
+                </div>
+              ) : (overviewAlerts?.alertas_aislados.por_grupo ?? []).length === 0 ? (
                 <p className="text-sm text-gray-500">No se detectaron alertas de aislados con los filtros actuales.</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -777,6 +866,7 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
             <ResponsesProgressCard
               total={overviewProgress?.total_alumnos ?? 0}
               completed={overviewProgress?.total_completados ?? 0}
+              loading={isLoading}
             />
 
             <ClassificationCard
@@ -784,22 +874,35 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
               subtitle="Alumnos con mas elecciones positivas"
               items={centralityItems}
               emptyMessage="No hay datos de centralidad para mostrar."
+              loading={isLoading}
             />
 
             <ActivityLogCard
               items={activityItems}
               emptyMessage="Sin actividad de avance por grupo para este cuestionario."
+              loading={isLoading}
             />
           </aside>
         </section>
       )}
 
-      {hasQuestionnaires && !isLoading && activeTab === 'cuestionarios' && (
+      {hasQuestionnaires && isDataReady && activeTab === 'cuestionarios' && (
         <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">
             <article className="rounded-xl border border-emerald-600/25 bg-white p-5 shadow-sm">
               <h3 className="text-lg font-bold text-[#0B5A4A]">Detalle del cuestionario seleccionado</h3>
 
+              {isLoading ? (
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="rounded-lg border border-gray-200 px-3 py-2 space-y-1.5">
+                      <Skeleton variant="text" className="w-16" />
+                      <Skeleton variant="bar" className="h-5 w-32" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+              <>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-gray-200 px-3 py-2">
                   <p className="text-[11px] font-semibold uppercase text-gray-500">Titulo</p>
@@ -822,6 +925,8 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
               <p className="mt-4 text-sm text-gray-600">
                 {questionnaireDetail?.descripcion || 'Sin descripcion registrada para este cuestionario.'}
               </p>
+              </>
+              )}
             </article>
 
             <article className="rounded-xl border border-emerald-600/25 bg-white p-5 shadow-sm">
@@ -830,7 +935,21 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
                 Resumen de avance de respuestas por cada grupo del periodo del cuestionario.
               </p>
 
-              {(questionnaireProgress?.grupos ?? []).length === 0 ? (
+              {isLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton variant="text" className="w-20" />
+                      <Skeleton variant="text" className="w-24" />
+                      <Skeleton variant="text" className="w-28" />
+                      <Skeleton variant="text" className="w-16" />
+                      <Skeleton variant="text" className="w-16" />
+                      <Skeleton variant="text" className="w-14" />
+                      <Skeleton variant="text" className="w-12" />
+                    </div>
+                  ))}
+                </div>
+              ) : (questionnaireProgress?.grupos ?? []).length === 0 ? (
                 <p className="text-sm text-gray-500">No hay grupos para mostrar progreso.</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -902,7 +1021,16 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
                 Previsualizacion de reactivos del cuestionario actual.
               </p>
 
-              {(questionnaireDetail?.preguntas ?? []).length === 0 ? (
+              {isLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="rounded-md border border-gray-200 px-3 py-2 space-y-1.5">
+                      <Skeleton variant="text" className="w-28" />
+                      <Skeleton variant="text" className="w-full" />
+                    </div>
+                  ))}
+                </div>
+              ) : (questionnaireDetail?.preguntas ?? []).length === 0 ? (
                 <p className="text-sm text-gray-500">Este cuestionario no tiene preguntas asociadas.</p>
               ) : (
                 <ul className="space-y-2">
@@ -921,7 +1049,7 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
         </section>
       )}
 
-      {hasQuestionnaires && !isLoading && activeTab === 'sociograma' && (
+      {hasQuestionnaires && isDataReady && activeTab === 'sociograma' && (
         <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
           <div className="space-y-4">
             <article className="rounded-xl border border-emerald-600/25 bg-white p-4 shadow-sm">
@@ -960,6 +1088,16 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
 
             <article className="rounded-xl border border-emerald-600/25 bg-white p-5 shadow-sm">
               <h3 className="mb-4 text-lg font-bold text-[#0B5A4A]">Distribucion del grupo</h3>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <Skeleton variant="text" className="w-20" />
+                      <Skeleton variant="text" className="w-8" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <div className="space-y-2 text-sm">
                 <p className="flex items-center justify-between">
                   <span className="text-gray-600">Aceptado</span>
@@ -974,6 +1112,7 @@ export function CommitteeDashboardView({ initialTab = 'resumen', mode = 'full' }
                   <span className="font-semibold text-gray-700">{nodeDistribution.invisibles}</span>
                 </p>
               </div>
+              )}
             </article>
           </aside>
         </section>

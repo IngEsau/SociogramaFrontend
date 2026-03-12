@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { RefreshCw, Search, Download, ChevronDown, Moon, Sun } from 'lucide-react';
+import { Spinner } from '../../../components/ui';
 import { useTopbarStore } from '../../../store';
 
 /** Interfaz de archivo de log */
@@ -206,7 +207,7 @@ export function AdminArchivosView() {
             <div className="flex-1 overflow-y-auto">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
-                  <RefreshCw size={32} className="animate-spin text-[#0F7E3C]" />
+                  <Spinner size="md" className="text-[#0F7E3C]" />
                 </div>
               ) : filteredAndSorted.length === 0 ? (
                 <div className="flex items-center justify-center h-full">

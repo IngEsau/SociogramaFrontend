@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { Spinner } from '../../components/ui';
 import { useAuthStore } from '../../store';
 import { getHomePath } from '../../core/routing';
 
@@ -54,7 +55,7 @@ export const GuestGuard = ({ children }: GuestGuardProps) => {
   if (isChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FEFEFF]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[#0F7E3C]"></div>
+        <Spinner size="lg" className="text-[#0F7E3C]" />
       </div>
     );
   }

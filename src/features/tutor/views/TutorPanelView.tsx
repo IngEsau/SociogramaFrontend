@@ -12,8 +12,9 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, Loader2, RefreshCw } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { ActivityLogCard, ClassificationCard, ResponsesProgressCard } from '../../../components/shared/dashboard';
+import { PageLoader } from '../../../components/ui';
 import { useTopbarStore, useToastStore } from '../../../store';
 import {
   SociogramGraph,
@@ -646,14 +647,7 @@ export function TutorPanelView() {
   }, [resetTopbar]);
 
   if (isLoadingCuestionarios && cuestionarios.length === 0) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 size={32} className="animate-spin text-[#245C52]" />
-          <p className="text-sm text-gray-500">Cargando panel del sociograma...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Cargando panel del sociograma..." />;
   }
 
   if (!isLoadingCuestionarios && cuestionarios.length === 0) {

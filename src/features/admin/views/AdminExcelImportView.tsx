@@ -22,9 +22,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
-  Loader2,
   AlertCircle,
 } from 'lucide-react';
+import { Spinner } from '../../../components/ui';
 import { adminService } from '../services';
 import { useToastStore } from '../../../store';
 import type {
@@ -544,7 +544,7 @@ function StepUpload({
         >
           {isAnalyzing ? (
             <>
-              <Loader2 size={16} className="animate-spin" />
+              <Spinner size="sm" className="text-white" />
               Analizando archivo...
             </>
           ) : (
@@ -791,7 +791,7 @@ function StepResult({
           }`}
         >
           {isExecuting ? (
-            <Loader2 size={20} className="text-blue-600 animate-spin shrink-0 mt-0.5" />
+            <Spinner size="sm" className="text-blue-600 shrink-0 mt-0.5" />
           ) : result?.success ? (
             <CheckCircle2 size={20} className="text-emerald-600 shrink-0 mt-0.5" />
           ) : (
@@ -833,7 +833,7 @@ function StepResult({
                 {ps.status === 'done' ? (
                   <CheckCircle2 size={16} className="text-emerald-500" />
                 ) : ps.status === 'loading' ? (
-                  <Loader2 size={16} className="text-blue-500 animate-spin" />
+                  <Spinner size="sm" className="text-blue-500" />
                 ) : (
                   <div className="w-4 h-4 rounded-full border-2 border-gray-300" />
                 )}

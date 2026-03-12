@@ -19,6 +19,8 @@ import type {
   CommitteeQuestionnaireStatsResponse,
   CommitteeQuestionnaireFilters,
   CommitteeQuestionnairesResponse,
+  DivisionesResponse,
+  TutoresResponse,
 } from '../types';
 
 function cleanParams<T extends object>(params?: T): Record<string, unknown> | undefined {
@@ -111,6 +113,22 @@ export const committeeService = {
   async getGraphs(params?: CommitteeFilters): Promise<CommitteeGraphsResponse> {
     const response = await api.get<CommitteeGraphsResponse>('/comite/graphs/', {
       params: cleanParams(params),
+    });
+    return response.data;
+  },
+
+  // ==========================================
+  // CATALOGOS - DIVISIONES Y TUTORES
+  // ==========================================
+
+  async getDivisiones(): Promise<DivisionesResponse> {
+    const response = await api.get<DivisionesResponse>('/admin/catalogos/divisiones/');
+    return response.data;
+  },
+
+  async getTutores(): Promise<TutoresResponse> {
+    const response = await api.get<TutoresResponse>('/admin/usuarios/', {
+      params: { rol: 'DOCENTE', activo: 'true' },
     });
     return response.data;
   },

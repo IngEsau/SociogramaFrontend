@@ -12,7 +12,8 @@
 
 import { useState, useEffect, useRef, useCallback, createElement } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Pencil, Check, X, ArrowLeft, Save, Loader2, RefreshCw, Info, Link2, MessageSquarePlus } from 'lucide-react';
+import { Plus, Trash2, Pencil, Check, X, ArrowLeft, Save, RefreshCw, Info, Link2, MessageSquarePlus } from 'lucide-react';
+import { Spinner } from '../../../components/ui';
 import { useTopbarStore, useToastStore } from '../../../store';
 import { GreenBall, RedBall } from '../../../components/ui';
 import { adminService } from '../services';
@@ -381,7 +382,7 @@ export function AdminBancoPreguntasView() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
-        <Loader2 size={32} className="animate-spin" />
+        <Spinner size="lg" className="text-[#0B5A4A]" />
         <p className="text-sm">Cargando banco de preguntas...</p>
       </div>
     );
@@ -478,7 +479,7 @@ export function AdminBancoPreguntasView() {
               disabled={isActionLoading}
               className="flex items-center gap-1.5 px-4 py-2 bg-[#0B5A4A] text-white text-sm font-semibold rounded-lg hover:bg-[#084438] transition-colors disabled:opacity-50"
             >
-              {isActionLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {isActionLoading ? <Spinner size="xs" className="text-white" /> : <Save size={14} />}
               Crear par
             </button>
             <button
@@ -754,7 +755,7 @@ export function AdminBancoPreguntasView() {
                 disabled={isActionLoading}
                 className="flex items-center gap-2 px-4 py-2 bg-[#7A1501] text-white text-sm font-semibold rounded-lg hover:bg-[#5c1001] transition-colors disabled:opacity-50"
               >
-                {isActionLoading && <Loader2 size={14} className="animate-spin" />}
+                {isActionLoading && <Spinner size="xs" className="text-white" />}
                 Eliminar {parDePreguntaAEliminar ? 'par' : 'pregunta'}
               </button>
             </div>
@@ -788,7 +789,7 @@ export function AdminBancoPreguntasView() {
                 disabled={isActionLoading}
                 className="flex items-center gap-2 px-4 py-2 bg-[#0B5A4A] text-white text-sm font-semibold rounded-lg hover:bg-[#084438] transition-colors disabled:opacity-50"
               >
-                {isActionLoading && <Loader2 size={14} className="animate-spin" />}
+                {isActionLoading && <Spinner size="xs" className="text-white" />}
                 Guardar
               </button>
             </div>
@@ -826,7 +827,7 @@ export function AdminBancoPreguntasView() {
                 disabled={isActionLoading}
                 className="flex items-center gap-2 px-4 py-2 bg-[#0B5A4A] text-white text-sm font-semibold rounded-lg hover:bg-[#084438] transition-colors disabled:opacity-50"
               >
-                {isActionLoading && <Loader2 size={14} className="animate-spin" />}
+                {isActionLoading && <Spinner size="xs" className="text-white" />}
                 Confirmar
               </button>
             </div>

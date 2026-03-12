@@ -31,6 +31,7 @@ interface ClassificationCardProps {
   onPreguntaChange?: (preguntaId: number) => void;
   onToggleVisibility?: () => void;
   isVisible?: boolean;
+  loading?: boolean;
 }
 
 export function ClassificationCard({
@@ -45,6 +46,7 @@ export function ClassificationCard({
   onPreguntaChange,
   onToggleVisibility,
   isVisible = true,
+  loading = false,
 }: ClassificationCardProps) {
   const hasItems = items && items.length > 0;
   const hasPreguntaSelector = preguntaOptions && preguntaOptions.length > 1 && onPreguntaChange;
@@ -151,7 +153,22 @@ export function ClassificationCard({
         </div>
       )}
 
-      {hasItems ? (
+      {loading ? (
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-3.5 w-4 rounded bg-gray-200 animate-pulse" />
+                <div className="space-y-1">
+                  <div className="h-3.5 w-36 rounded bg-gray-200 animate-pulse" />
+                  <div className="h-3 w-28 rounded bg-gray-200 animate-pulse" />
+                </div>
+              </div>
+              <div className="h-3.5 w-10 rounded bg-gray-200 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      ) : hasItems ? (
         <>
           <div className="mt-4 text-xs flex justify-between shrink-0">
             <span className="font-semibold text-gray-700">Nombre completo</span>

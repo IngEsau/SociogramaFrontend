@@ -15,9 +15,9 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
 
   return (
     <header className="bg-white border-b border-black/5 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
         {/* Saludo y Menú hamburguesa */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             onClick={onMenuClick}
             className="md:hidden p-2 rounded-md border border-black/10 hover:bg-black/5 shrink-0"
@@ -26,13 +26,13 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
             <Menu size={18} />
           </button>
 
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#0B5A4A] truncate">
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#0B5A4A] whitespace-nowrap">
             Hola <span className="text-black">{firstName}!</span>
           </h1>
         </div>
 
         {/* Zona derecha: contenido dinámico o default */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 lg:gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 lg:gap-4 lg:flex-1 lg:min-w-0 lg:justify-end">
           {hasCustomContent ? (
             <>{customContent}</>
           ) : hasCustomActions ? (

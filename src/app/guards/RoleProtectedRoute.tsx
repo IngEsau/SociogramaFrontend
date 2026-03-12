@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { Spinner } from '../../components/ui';
 import { useAuthStore } from '../../store';
 import { getHomePath, normalizeRole, type AppRole } from '../../core/routing';
 
@@ -38,7 +39,7 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FEFEFF]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#0F7E3C] mx-auto mb-4"></div>
+          <Spinner size="lg" className="text-[#0F7E3C] mx-auto mb-4" />
           <p className="text-[#313131] font-['Roboto']">Verificando permisos...</p>
         </div>
       </div>
